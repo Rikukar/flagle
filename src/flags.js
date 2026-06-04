@@ -15,8 +15,8 @@ import mxEmblem from './emblems/mx.svg'
 //             180 = looks identical every half-turn (most rects)
 //             'full' = any rotation is fine (circles)
 //
-// All five flags below are fully geometric, so they render 100% accurately
-// from this data — no hand-drawn approximations.
+// Most flags below are fully geometric, so they render 100% accurately from
+// this data; emblem flags (Canada, Mexico) pull their symbol from real artwork.
 
 export const FLAG_W = 640
 export const FLAG_H = 480
@@ -29,6 +29,18 @@ function vstripe(id, color, index) {
     color,
     shape: { kind: 'rect', w: third, h: FLAG_H },
     target: { x: third * index + third / 2, y: FLAG_H / 2, rot: 0 },
+    sym: 180,
+  }
+}
+
+// Horizontal stripe; `count` is the number of equal bands (default 3).
+function hstripe(id, color, index, count = 3) {
+  const h = FLAG_H / count
+  return {
+    id,
+    color,
+    shape: { kind: 'rect', w: FLAG_W, h },
+    target: { x: FLAG_W / 2, y: h * index + h / 2, rot: 0 },
     sym: 180,
   }
 }
@@ -156,6 +168,55 @@ export const FLAGS = [
         target: { x: 320, y: 240, rot: 0 },
         sym: 360,
       },
+    ],
+  },
+  {
+    id: 'de',
+    code: 'de',
+    name: 'Germany',
+    blocks: [
+      hstripe('de-black', '#000000', 0),
+      hstripe('de-red', '#DD0000', 1),
+      hstripe('de-gold', '#FFCE00', 2),
+    ],
+  },
+  {
+    id: 'nl',
+    code: 'nl',
+    name: 'Netherlands',
+    blocks: [
+      hstripe('nl-red', '#AE1C28', 0),
+      hstripe('nl-white', '#ffffff', 1),
+      hstripe('nl-blue', '#21468B', 2),
+    ],
+  },
+  {
+    id: 'ua',
+    code: 'ua',
+    name: 'Ukraine',
+    blocks: [
+      hstripe('ua-blue', '#0057B7', 0, 2),
+      hstripe('ua-yellow', '#FFDD00', 1, 2),
+    ],
+  },
+  {
+    id: 'ie',
+    code: 'ie',
+    name: 'Ireland',
+    blocks: [
+      vstripe('ie-green', '#169B62', 0),
+      vstripe('ie-white', '#ffffff', 1),
+      vstripe('ie-orange', '#FF883E', 2),
+    ],
+  },
+  {
+    id: 'ro',
+    code: 'ro',
+    name: 'Romania',
+    blocks: [
+      vstripe('ro-blue', '#002B7F', 0),
+      vstripe('ro-yellow', '#FCD116', 1),
+      vstripe('ro-red', '#CE1126', 2),
     ],
   },
 ]
