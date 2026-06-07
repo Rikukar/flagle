@@ -13,9 +13,10 @@ const W_SIZE = 0.3
 // Resize limits and random starting range.
 const MIN_S = 0.3
 const MAX_S = 2.2
+const EDGE = 22 // grab band (units) near a piece edge/corner that starts a resize
 const rand = (lo, hi) => lo + Math.random() * (hi - lo)
 const randScale = () => rand(0.55, 1.55)
-const clampScale = (v) => Math.min(MAX_S, Math.max(MIN_S, v))
+const clampBetween = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
 // --- tray geometry (below the flag frame) ---
 const TRAY_Y0 = 540
@@ -30,12 +31,6 @@ const TRAY_MAX_SCALE = 0.5
 
 const VB_W = FLAG_W + 40
 const VB_H = TRAY_Y1 + 20
-const OVERLAY_STYLE = {
-  left: `${(20 / VB_W) * 100}%`,
-  top: `${(20 / VB_H) * 100}%`,
-  width: `${(FLAG_W / VB_W) * 100}%`,
-  height: `${(FLAG_H / VB_H) * 100}%`,
-}
 
 // Symbols (circle/emblem) scale uniformly so they never distort; rects are free.
 const isUniform = (b) => b.shape.kind !== 'rect'
@@ -49,13 +44,31 @@ function dims(b) {
   return { w: 2 * s.half, h: 2 * s.half } // path
 }
 
-// --- canvas bounds (flag frame + tray) ---
-const VB_MINX = -20
-const VB_MAXX = -20 + VB_W
-const VB_MINY = -20
-const VB_MAXY = -20 + VB_H
+// A piece may never grow larger than the flag itself.
+const capX = (b) => Math.min(MAX_S, FLAG_W / dims(b).w)
+const capY = (b) => Math.min(MAX_S, FLAG_H / dims(b).h)
+const capU = (b) => { const n = dims(b); return Math.min(MAX_S, FLAG_W / n.w, FLAG_H / n.h) }
 
-// Keep a block's rotated, scaled bounding box inside the canvas by clamping its center.
+// Which cursor for a pointer at local offset (lx,ly) over a piece.
+// interior -> move; side -> axis arrows (rotation-aware); corner/symbol -> move.
+function cursorFor(block, lx, ly, u, v, hw0, hh0) {
+  const edgeX = Math.min(EDGE, hw0 * 0.45)
+  const edgeY = Math.min(EDGE, hh0 * 0.45)
+  const nearX = Math.abs(Math.abs(lx) - hw0) <= edgeX && Math.abs(ly) <= hh0 + edgeY
+  const nearY = Math.abs(Math.abs(ly) - hh0) <= edgeY && Math.abs(lx) <= hw0 + edgeX
+  if (!(nearX || nearY)) return 'grab' // interior -> move by dragging
+  if (isUniform(block) || (nearX && nearY)) return 'move' // corner / symbol -> 4-way arrows
+  const dir = nearX ? u : v // resize direction on screen
+  return Math.abs(dir.x) >= Math.abs(dir.y) ? 'ew-resize' : 'ns-resize'
+}
+
+// --- placement bounds: pieces on the flag may not cross the flag borders ---
+const VB_MINX = 0
+const VB_MAXX = FLAG_W
+const VB_MINY = 0
+const VB_MAXY = FLAG_H
+
+// Keep a block's rotated, scaled bounding box inside the flag frame by clamping its center.
 function clampCenter(b, x, y, rot, sx, sy) {
   const nat = dims(b)
   const w = nat.w * sx
@@ -148,9 +161,21 @@ function Shape({ b, stroke, strokeW }) {
   const s = b.shape
   const ve = 'non-scaling-stroke'
   if (s.kind === 'rect') return <rect x={-s.w / 2} y={-s.h / 2} width={s.w} height={s.h} fill={b.color} stroke={stroke} strokeWidth={strokeW} vectorEffect={ve} />
-  if (s.kind === 'circle') return <circle r={s.r} fill={b.color} stroke={stroke} strokeWidth={strokeW} vectorEffect={ve} />
+  if (s.kind === 'circle') {
+    return (
+      <>
+        <rect x={-s.r} y={-s.r} width={2 * s.r} height={2 * s.r} fill="transparent" />
+        <circle r={s.r} fill={b.color} stroke={stroke} strokeWidth={strokeW} vectorEffect={ve} />
+      </>
+    )
+  }
   if (s.kind === 'path') {
-    return <path d={s.d} transform={`translate(${-s.cx} ${-s.cy})`} fill={b.color} stroke={stroke === 'none' ? undefined : stroke} strokeWidth={stroke === 'none' ? 0 : strokeW} vectorEffect={ve} />
+    return (
+      <>
+        <rect x={-s.half} y={-s.half} width={2 * s.half} height={2 * s.half} fill="transparent" />
+        <path d={s.d} transform={`translate(${-s.cx} ${-s.cy})`} fill={b.color} stroke={stroke === 'none' ? undefined : stroke} strokeWidth={stroke === 'none' ? 0 : strokeW} vectorEffect={ve} />
+      </>
+    )
   }
   return (
     <>
@@ -176,9 +201,14 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     }
     const next = {}
     flag.blocks.forEach((b) => {
-      const u = isUniform(b)
-      const sx = randScale()
-      next[b.id] = { zone: 'tray', x: 0, y: 0, rot: 0, sx, sy: u ? sx : randScale() }
+      if (isUniform(b)) {
+        const s = clampBetween(randScale(), MIN_S, capU(b))
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot: 0, sx: s, sy: s }
+      } else {
+        const sx = clampBetween(randScale(), MIN_S, capX(b))
+        const sy = clampBetween(randScale(), MIN_S, capY(b))
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot: 0, sx, sy }
+      }
     })
     setLocs(next)
     setTrayOrder(ids)
@@ -219,13 +249,57 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
 
   const locked = score !== null
 
+  // Grabbing near an edge resizes one dimension; near a corner resizes evenly;
+  // the interior moves. Symbols always resize evenly. No on-piece buttons.
   const grabBoard = (e, id) => {
     if (locked) return
     e.stopPropagation()
     setSelected(id)
     const p = toSvg(e)
     const loc = locs[id]
+    const block = flag.blocks.find((b) => b.id === id)
+    const nat = dims(block)
+    const r = (loc.rot * Math.PI) / 180
+    const u = { x: Math.cos(r), y: Math.sin(r) }
+    const v = { x: -Math.sin(r), y: Math.cos(r) }
+    const hw0 = (nat.w / 2) * loc.sx
+    const hh0 = (nat.h / 2) * loc.sy
+    const lx = (p.x - loc.x) * u.x + (p.y - loc.y) * u.y // local x offset
+    const ly = (p.x - loc.x) * v.x + (p.y - loc.y) * v.y // local y offset
+    document.body.style.cursor = cursorFor(block, lx, ly, u, v, hw0, hh0) // hold cursor during drag
+    const edgeX = Math.min(EDGE, hw0 * 0.45)
+    const edgeY = Math.min(EDGE, hh0 * 0.45)
+    const nearX = Math.abs(Math.abs(lx) - hw0) <= edgeX && Math.abs(ly) <= hh0 + edgeY
+    const nearY = Math.abs(Math.abs(ly) - hh0) <= edgeY && Math.abs(lx) <= hw0 + edgeX
+
+    if (nearX || nearY) {
+      const signX = lx >= 0 ? 1 : -1
+      const signY = ly >= 0 ? 1 : -1
+      const axis = (isUniform(block) || (nearX && nearY)) ? 'uniform' : (nearX ? 'x' : 'y')
+      let ax = loc.x
+      let ay = loc.y
+      if (axis === 'x' || axis === 'uniform') { ax -= u.x * signX * hw0; ay -= u.y * signX * hw0 }
+      if (axis === 'y' || axis === 'uniform') { ax -= v.x * signY * hh0; ay -= v.y * signY * hh0 }
+      drag.current = { id, mode: 'resize', axis, u, v, hw0, hh0, sx0: loc.sx, sy0: loc.sy, signX, signY, anchor: { x: ax, y: ay } }
+      return
+    }
     drag.current = { id, mode: 'move', offX: p.x - loc.x, offY: p.y - loc.y }
+  }
+
+  // Update the cursor as the pointer hovers a piece (no drag in progress).
+  const hoverPiece = (e, block) => {
+    if (locked || drag.current) return
+    const loc = locs[block.id]
+    if (!loc) return
+    const r = (loc.rot * Math.PI) / 180
+    const u = { x: Math.cos(r), y: Math.sin(r) }
+    const v = { x: -Math.sin(r), y: Math.cos(r) }
+    const hw0 = (dims(block).w / 2) * loc.sx
+    const hh0 = (dims(block).h / 2) * loc.sy
+    const p = toSvg(e)
+    const lx = (p.x - loc.x) * u.x + (p.y - loc.y) * u.y
+    const ly = (p.x - loc.x) * v.x + (p.y - loc.y) * v.y
+    e.currentTarget.style.cursor = cursorFor(block, lx, ly, u, v, hw0, hh0)
   }
 
   const grabTray = (e, id) => {
@@ -250,26 +324,6 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     drag.current = { id, mode: 'rotate' }
   }
 
-  const startResize = (e, id, axis) => {
-    if (locked) return
-    e.stopPropagation()
-    setSelected(id)
-    const block = flag.blocks.find((b) => b.id === id)
-    const loc = locs[id]
-    const nat = dims(block)
-    const r = (loc.rot * Math.PI) / 180
-    const u = { x: Math.cos(r), y: Math.sin(r) } // local +x (width) axis in world
-    const v = { x: -Math.sin(r), y: Math.cos(r) } // local +y (height) axis in world
-    const hw0 = (nat.w / 2) * loc.sx
-    const hh0 = (nat.h / 2) * loc.sy
-    // anchor = the edge/corner OPPOSITE the handle, kept fixed while dragging
-    let ax = loc.x
-    let ay = loc.y
-    if (axis === 'x' || axis === 'uniform') { ax -= u.x * hw0; ay -= u.y * hw0 }
-    if (axis === 'y' || axis === 'uniform') { ax -= v.x * hh0; ay -= v.y * hh0 }
-    drag.current = { id, mode: 'resize', axis, u, v, hw0, hh0, sx0: loc.sx, sy0: loc.sy, nat, anchor: { x: ax, y: ay } }
-  }
-
   useEffect(() => {
     const onMove = (e) => {
       const d = drag.current
@@ -288,7 +342,8 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           const cl = clampCenter(block, loc.x, loc.y, ang, loc.sx, loc.sy)
           return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot: ang } }
         }
-        // resize: anchor the opposite edge/corner and grow toward the pointer.
+        // resize: opposite edge/corner stays anchored; grow toward the pointer.
+        const nat = dims(block)
         const ax = p.x - d.anchor.x
         const ay = p.y - d.anchor.y
         let sx = loc.sx
@@ -296,31 +351,32 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         let cx = loc.x
         let cy = loc.y
         if (d.axis === 'x') {
-          const f = (ax * d.u.x + ay * d.u.y) / (2 * d.hw0)
-          sx = clampScale(d.sx0 * f)
-          const hw = (d.nat.w / 2) * sx
-          cx = d.anchor.x + d.u.x * hw
-          cy = d.anchor.y + d.u.y * hw
+          const width = d.signX * (ax * d.u.x + ay * d.u.y)
+          sx = clampBetween((width / (2 * d.hw0)) * d.sx0, MIN_S, capX(block))
+          const hw = (nat.w / 2) * sx
+          cx = d.anchor.x + d.u.x * d.signX * hw
+          cy = d.anchor.y + d.u.y * d.signX * hw
         } else if (d.axis === 'y') {
-          const f = (ax * d.v.x + ay * d.v.y) / (2 * d.hh0)
-          sy = clampScale(d.sy0 * f)
-          const hh = (d.nat.h / 2) * sy
-          cx = d.anchor.x + d.v.x * hh
-          cy = d.anchor.y + d.v.y * hh
+          const height = d.signY * (ax * d.v.x + ay * d.v.y)
+          sy = clampBetween((height / (2 * d.hh0)) * d.sy0, MIN_S, capY(block))
+          const hh = (nat.h / 2) * sy
+          cx = d.anchor.x + d.v.x * d.signY * hh
+          cy = d.anchor.y + d.v.y * d.signY * hh
         } else {
           // corner: even growth (same factor on both), anchored at the opposite corner
-          const Dx = d.u.x * 2 * d.hw0 + d.v.x * 2 * d.hh0
-          const Dy = d.u.y * 2 * d.hw0 + d.v.y * 2 * d.hh0
+          const Dx = d.u.x * d.signX * 2 * d.hw0 + d.v.x * d.signY * 2 * d.hh0
+          const Dy = d.u.y * d.signX * 2 * d.hw0 + d.v.y * d.signY * 2 * d.hh0
           const fraw = (ax * Dx + ay * Dy) / (Dx * Dx + Dy * Dy)
+          // cap the shared factor so neither dimension exceeds MAX_S or the flag
           const fmin = Math.max(MIN_S / d.sx0, MIN_S / d.sy0)
-          const fmax = Math.min(MAX_S / d.sx0, MAX_S / d.sy0)
-          const f = Math.min(fmax, Math.max(fmin, fraw))
+          const fmax = Math.min(MAX_S / d.sx0, MAX_S / d.sy0, FLAG_W / (d.sx0 * nat.w), FLAG_H / (d.sy0 * nat.h))
+          const f = clampBetween(fraw, fmin, fmax)
           sx = d.sx0 * f
           sy = d.sy0 * f
-          const hw = (d.nat.w / 2) * sx
-          const hh = (d.nat.h / 2) * sy
-          cx = d.anchor.x + d.u.x * hw + d.v.x * hh
-          cy = d.anchor.y + d.u.y * hw + d.v.y * hh
+          const hw = (nat.w / 2) * sx
+          const hh = (nat.h / 2) * sy
+          cx = d.anchor.x + d.u.x * d.signX * hw + d.v.x * d.signY * hh
+          cy = d.anchor.y + d.u.y * d.signX * hw + d.v.y * d.signY * hh
         }
         const cl = clampCenter(block, cx, cy, loc.rot, sx, sy)
         return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, sx, sy } }
@@ -329,6 +385,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     const onUp = (e) => {
       const d = drag.current
       drag.current = null
+      document.body.style.cursor = ''
       if (!d) return
       const p = toSvg(e)
       if (p.y >= TRAY_Y0 && d.mode === 'move') {
@@ -381,10 +438,53 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
 
   const boardBlocks = flag.blocks.filter((b) => locs[b.id]?.zone === 'board')
 
-  // small white square resize handle
-  const ResizeHandle = ({ x, y, id, axis, cursor }) => (
-    <rect x={x - 7} y={y - 7} width="14" height="14" rx="2" fill="#fff" stroke="#3b82f6" strokeWidth="3" style={{ cursor }} onPointerDown={(e) => startResize(e, id, axis)} />
-  )
+  // --- result view (after submit): your flag vs the real flag, side by side ---
+  if (locked) {
+    return (
+      <div className="result">
+        <span className="round-label">{roundLabel}</span>
+        <h2 className="result-title">{flag.name}</h2>
+
+        <div className="result-score">
+          <span className="score-label">You scored</span>
+          <span className="score-value">{score.toFixed(2)}</span>
+          <span className="score-max">/ 10.00</span>
+        </div>
+
+        <div className="result-flags">
+          <figure>
+            <figcaption>Your flag</figcaption>
+            <svg className="mini" viewBox={`0 0 ${FLAG_W} ${FLAG_H}`}>
+              <clipPath id="flagclip"><rect x="0" y="0" width={FLAG_W} height={FLAG_H} /></clipPath>
+              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="#fff" />
+              <g clipPath="url(#flagclip)">
+                {boardBlocks.map((b) => {
+                  const loc = locs[b.id]
+                  return (
+                    <g key={b.id} transform={`translate(${loc.x} ${loc.y}) rotate(${loc.rot})`}>
+                      <g transform={`scale(${loc.sx} ${loc.sy})`}>
+                        <Shape b={b} stroke="none" strokeW={0} />
+                      </g>
+                    </g>
+                  )
+                })}
+              </g>
+              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" stroke="#d4dae1" strokeWidth="2" />
+            </svg>
+          </figure>
+          <figure>
+            <figcaption>Real flag</figcaption>
+            <span className={`fi fi-${flag.code} mini real`} />
+          </figure>
+        </div>
+
+        <div className="actions result-actions">
+          <button className="btn ghost" onClick={reset}>Try again</button>
+          <button className="btn" onClick={() => onNext(score)}>{isLast ? 'Finish' : 'Next flag →'}</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="game">
@@ -408,31 +508,18 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             const loc = locs[b.id]
             const isSel = selected === b.id
             const emblem = b.shape.kind === 'path' || b.shape.kind === 'image'
-            const stroke = isSel ? '#3b82f6' : (emblem ? 'none' : 'rgba(0,0,0,0.25)')
-            const strokeW = isSel ? (b.shape.kind === 'path' ? 4 : 3) : 1
-            const nat = dims(b)
-            const ex = (nat.w / 2) * loc.sx // visible half-width
-            const ey = (nat.h / 2) * loc.sy // visible half-height
+            const stroke = isSel ? '#3b82f6' : (emblem ? 'none' : 'rgba(0,0,0,0.18)')
+            const strokeW = isSel ? 1.5 : 1
+            const ey = (dims(b).h / 2) * loc.sy // visible half-height (for rotate handle)
             return (
-              <g key={b.id} transform={`translate(${loc.x} ${loc.y}) rotate(${loc.rot})`} onPointerDown={(e) => grabBoard(e, b.id)} style={{ cursor: locked ? 'default' : 'grab' }}>
+              <g key={b.id} transform={`translate(${loc.x} ${loc.y}) rotate(${loc.rot})`} onPointerDown={(e) => grabBoard(e, b.id)} onPointerMove={(e) => hoverPiece(e, b)} style={{ cursor: locked ? 'default' : 'grab' }}>
                 <g transform={`scale(${loc.sx} ${loc.sy})`}>
                   <Shape b={b} stroke={stroke} strokeW={strokeW} />
                 </g>
                 {isSel && !locked && (
                   <g>
-                    {/* rotate */}
-                    <line x1="0" y1={-ey} x2="0" y2={-ey - 34} stroke="#3b82f6" strokeWidth="3" />
-                    <circle cx="0" cy={-ey - 40} r="12" fill="#fff" stroke="#3b82f6" strokeWidth="3" style={{ cursor: 'grab' }} onPointerDown={(e) => startRotate(e, b.id)} />
-                    {/* resize */}
-                    {isUniform(b) ? (
-                      <ResizeHandle x={ex} y={ey} id={b.id} axis="uniform" cursor="nwse-resize" />
-                    ) : (
-                      <>
-                        <ResizeHandle x={ex} y={0} id={b.id} axis="x" cursor="ew-resize" />
-                        <ResizeHandle x={0} y={ey} id={b.id} axis="y" cursor="ns-resize" />
-                        <ResizeHandle x={ex} y={ey} id={b.id} axis="uniform" cursor="nwse-resize" />
-                      </>
-                    )}
+                    <line x1="0" y1={-ey} x2="0" y2={-ey - 24} stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                    <circle cx="0" cy={-ey - 28} r="8" fill="#fff" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} onPointerDown={(e) => startRotate(e, b.id)} />
                   </g>
                 )}
               </g>
@@ -450,44 +537,21 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             )
           })}
         </svg>
-
-        {locked && (
-          <div className="flag-overlay" style={OVERLAY_STYLE}>
-            <span className={`fi fi-${flag.code}`} />
-          </div>
-        )}
       </div>
 
       <div className="side">
         <span className="round-label">{roundLabel}</span>
         <h2>{flag.name}</h2>
 
-        {!locked ? (
-          <>
-            <p className="hint">Drag pieces from the tray and match the real flag as closely as you can — <strong>position, rotation, and size</strong> all count. Pieces start at random sizes: select one, then drag the square handles to resize (symbols resize evenly). Nothing snaps to the answer. Submit to score from 1.00 to 10.00.</p>
+        <p className="hint">Drag pieces from the tray and match the real flag as closely as you can — <strong>position, rotation, and size</strong> all count. Pieces start at random sizes: drag the middle of a piece to move it, grab an <strong>edge</strong> to resize that side, or a <strong>corner</strong> to resize evenly (symbols always resize evenly). Use the dot above a piece to rotate. Submit to score from 1.00 to 10.00.</p>
 
-            <p className="status">{placedCount} / {flag.blocks.length} placed</p>
+        <p className="status">{placedCount} / {flag.blocks.length} placed</p>
 
-            <div className="actions">
-              <button className="btn ghost" onClick={reset}>Shuffle / Reset</button>
-              <button className="btn ghost" onClick={onSkip}>Skip</button>
-              <button className="btn" onClick={submit}>Submit answer</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="scorecard">
-              <span className="score-label">Your flag scored</span>
-              <span className="score-value">{score.toFixed(2)}</span>
-              <span className="score-max">/ 10.00</span>
-            </div>
-            <p className="hint">The real flag is overlaid on yours so you can see how close you got.</p>
-            <div className="actions">
-              <button className="btn ghost" onClick={reset}>Try again</button>
-              <button className="btn" onClick={() => onNext(score)}>{isLast ? 'Finish' : 'Next flag →'}</button>
-            </div>
-          </>
-        )}
+        <div className="actions">
+          <button className="btn ghost" onClick={reset}>Shuffle / Reset</button>
+          <button className="btn ghost" onClick={onSkip}>Skip</button>
+          <button className="btn" onClick={submit}>Submit answer</button>
+        </div>
       </div>
     </div>
   )

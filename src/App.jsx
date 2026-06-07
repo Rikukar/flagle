@@ -58,7 +58,7 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Flagle</h1>
-        <p className="tagline">Build the flag from its pieces — you only get the country's name. Place each piece as accurately as you can; you're scored on how close you get.</p>
+        <p className="tagline">Build the flag from its pieces. Place each piece as accurately as you can; you're scored on how close you get.</p>
       </header>
       <FlagGame
         key={flag.id}
