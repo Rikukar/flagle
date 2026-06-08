@@ -45,6 +45,21 @@ function hstripe(id, color, index, count = 3) {
   }
 }
 
+// A full-width horizontal band of arbitrary height at a given vertical center.
+function hband(id, color, yCenter, h) {
+  return { id, color, shape: { kind: 'rect', w: FLAG_W, h }, target: { x: FLAG_W / 2, y: yCenter, rot: 0 }, sym: 180 }
+}
+
+// A full-height vertical bar of arbitrary width at a given horizontal center.
+function vbar(id, color, xCenter, w) {
+  return { id, color, shape: { kind: 'rect', w, h: FLAG_H }, target: { x: xCenter, y: FLAG_H / 2, rot: 0 }, sym: 180 }
+}
+
+// The whole flag field.
+function field(id, color) {
+  return { id, color, shape: { kind: 'rect', w: FLAG_W, h: FLAG_H }, target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 }, sym: 180 }
+}
+
 export const FLAGS = [
   {
     id: 'fr',
@@ -217,6 +232,74 @@ export const FLAGS = [
       vstripe('ro-blue', '#002B7F', 0),
       vstripe('ro-yellow', '#FCD116', 1),
       vstripe('ro-red', '#CE1126', 2),
+    ],
+  },
+
+  // ---- horizontal tricolours ----
+  { id: 'ru', code: 'ru', name: 'Russia', blocks: [hstripe('ru-white', '#ffffff', 0), hstripe('ru-blue', '#0039A6', 1), hstripe('ru-red', '#D52B1E', 2)] },
+  { id: 'at', code: 'at', name: 'Austria', blocks: [hstripe('at-red1', '#ED2939', 0), hstripe('at-white', '#ffffff', 1), hstripe('at-red2', '#ED2939', 2)] },
+  { id: 'ee', code: 'ee', name: 'Estonia', blocks: [hstripe('ee-blue', '#0072CE', 0), hstripe('ee-black', '#000000', 1), hstripe('ee-white', '#ffffff', 2)] },
+  { id: 'hu', code: 'hu', name: 'Hungary', blocks: [hstripe('hu-red', '#CD2A3E', 0), hstripe('hu-white', '#ffffff', 1), hstripe('hu-green', '#436F4D', 2)] },
+  { id: 'bg', code: 'bg', name: 'Bulgaria', blocks: [hstripe('bg-white', '#ffffff', 0), hstripe('bg-green', '#00966E', 1), hstripe('bg-red', '#D62612', 2)] },
+  { id: 'lt', code: 'lt', name: 'Lithuania', blocks: [hstripe('lt-yellow', '#FDB913', 0), hstripe('lt-green', '#006A44', 1), hstripe('lt-red', '#C1272D', 2)] },
+  { id: 'lu', code: 'lu', name: 'Luxembourg', blocks: [hstripe('lu-red', '#ED2939', 0), hstripe('lu-white', '#ffffff', 1), hstripe('lu-blue', '#00A1DE', 2)] },
+  { id: 'am', code: 'am', name: 'Armenia', blocks: [hstripe('am-red', '#D90012', 0), hstripe('am-blue', '#0033A0', 1), hstripe('am-orange', '#F2A800', 2)] },
+  { id: 'ga', code: 'ga', name: 'Gabon', blocks: [hstripe('ga-green', '#009E60', 0), hstripe('ga-yellow', '#FCD116', 1), hstripe('ga-blue', '#3A75C4', 2)] },
+  { id: 'sl', code: 'sl', name: 'Sierra Leone', blocks: [hstripe('sl-green', '#1EB53A', 0), hstripe('sl-white', '#ffffff', 1), hstripe('sl-blue', '#0072C6', 2)] },
+
+  // ---- vertical tricolours ----
+  { id: 'td', code: 'td', name: 'Chad', blocks: [vstripe('td-blue', '#002664', 0), vstripe('td-yellow', '#FECB00', 1), vstripe('td-red', '#C60C30', 2)] },
+  { id: 'gn', code: 'gn', name: 'Guinea', blocks: [vstripe('gn-red', '#CE1126', 0), vstripe('gn-yellow', '#FCD116', 1), vstripe('gn-green', '#009460', 2)] },
+  { id: 'ml', code: 'ml', name: 'Mali', blocks: [vstripe('ml-green', '#14B53A', 0), vstripe('ml-yellow', '#FCD116', 1), vstripe('ml-red', '#CE1126', 2)] },
+  { id: 'ci', code: 'ci', name: 'Ivory Coast', blocks: [vstripe('ci-orange', '#F77F00', 0), vstripe('ci-white', '#ffffff', 1), vstripe('ci-green', '#009E60', 2)] },
+
+  // ---- two bands ----
+  { id: 'pl', code: 'pl', name: 'Poland', blocks: [hstripe('pl-white', '#ffffff', 0, 2), hstripe('pl-red', '#DC143C', 1, 2)] },
+  { id: 'id', code: 'id', name: 'Indonesia', blocks: [hstripe('id-red', '#CE1126', 0, 2), hstripe('id-white', '#ffffff', 1, 2)] },
+
+  // ---- five bands ----
+  {
+    id: 'th', code: 'th', name: 'Thailand',
+    blocks: [
+      hband('th-red1', '#A51931', 40, 80),
+      hband('th-white1', '#F4F5F8', 120, 80),
+      hband('th-blue', '#2D2A4A', 240, 160),
+      hband('th-white2', '#F4F5F8', 360, 80),
+      hband('th-red2', '#A51931', 440, 80),
+    ],
+  },
+
+  // ---- Nordic crosses (off-centre cross) ----
+  {
+    id: 'se', code: 'se', name: 'Sweden',
+    blocks: [field('se-field', '#006AA7'), vbar('se-cross-v', '#FECC00', 240, 80), hband('se-cross-h', '#FECC00', 240, 96)],
+  },
+  {
+    id: 'dk', code: 'dk', name: 'Denmark',
+    blocks: [field('dk-field', '#C8102E'), vbar('dk-cross-v', '#ffffff', 242, 69), hband('dk-cross-h', '#ffffff', 240, 69)],
+  },
+  {
+    id: 'fi', code: 'fi', name: 'Finland',
+    blocks: [field('fi-field', '#ffffff'), vbar('fi-cross-v', '#003580', 231, 107), hband('fi-cross-h', '#003580', 240, 131)],
+  },
+
+  // ---- field + disc ----
+  {
+    id: 'bd', code: 'bd', name: 'Bangladesh',
+    blocks: [
+      field('bd-field', '#006A4E'),
+      { id: 'bd-disc', color: '#F42A41', shape: { kind: 'circle', r: 96 }, target: { x: 288, y: 240, rot: 0 }, sym: 'full' },
+    ],
+  },
+
+  // ---- bar + stripes ----
+  {
+    id: 'ae', code: 'ae', name: 'United Arab Emirates',
+    blocks: [
+      hband('ae-green', '#009739', 80, 160),
+      hband('ae-white', '#ffffff', 240, 160),
+      hband('ae-black', '#000000', 400, 160),
+      vbar('ae-red', '#EF3340', 80, 160),
     ],
   },
 ]

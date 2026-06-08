@@ -15,7 +15,8 @@ const MIN_S = 0.3
 const MAX_S = 2.2
 const EDGE = 22 // grab band (units) near a piece edge/corner that starts a resize
 const rand = (lo, hi) => lo + Math.random() * (hi - lo)
-const randScale = () => rand(0.55, 1.55)
+const randScale = () => rand(0.3, 0.6) // start small so pieces don't fill the flag
+const randRot = () => Math.random() * 360
 const clampBetween = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
 // --- tray geometry (below the flag frame) ---
@@ -201,13 +202,14 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     }
     const next = {}
     flag.blocks.forEach((b) => {
+      const rot = randRot()
       if (isUniform(b)) {
         const s = clampBetween(randScale(), MIN_S, capU(b))
-        next[b.id] = { zone: 'tray', x: 0, y: 0, rot: 0, sx: s, sy: s }
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx: s, sy: s }
       } else {
         const sx = clampBetween(randScale(), MIN_S, capX(b))
         const sy = clampBetween(randScale(), MIN_S, capY(b))
-        next[b.id] = { zone: 'tray', x: 0, y: 0, rot: 0, sx, sy }
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx, sy }
       }
     })
     setLocs(next)
@@ -222,9 +224,14 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     const items = trayOrder.map((id) => {
       const b = flag.blocks.find((x) => x.id === id)
       const d = dims(b)
-      return { id, d, scale: Math.min(TRAY_MAX_SCALE, TRAY_INNER_H / d.h) }
+      const r = ((locs[id]?.rot || 0) * Math.PI) / 180
+      const c = Math.abs(Math.cos(r))
+      const s = Math.abs(Math.sin(r))
+      const rw = d.w * c + d.h * s // rotated bounding box
+      const rh = d.w * s + d.h * c
+      return { id, rw, scale: Math.min(TRAY_MAX_SCALE, TRAY_INNER_H / rh) }
     })
-    let total = items.reduce((sum, it) => sum + it.d.w * it.scale, 0) + TRAY_GAP * Math.max(0, items.length - 1)
+    let total = items.reduce((sum, it) => sum + it.rw * it.scale, 0) + TRAY_GAP * Math.max(0, items.length - 1)
     const shrink = total > TRAY_WIDTH ? TRAY_WIDTH / total : 1
     items.forEach((it) => { it.scale *= shrink })
     total *= shrink
@@ -232,12 +239,12 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     let x = TRAY_LEFT + Math.max(0, (TRAY_WIDTH - total) / 2)
     const map = {}
     items.forEach((it) => {
-      const w = it.d.w * it.scale
+      const w = it.rw * it.scale
       map[it.id] = { x: x + w / 2, y: cy, scale: it.scale }
       x += w + TRAY_GAP
     })
     return map
-  }, [trayOrder, flag])
+  }, [trayOrder, flag, locs])
 
   const toSvg = useCallback((e) => {
     const svg = svgRef.current
@@ -311,8 +318,8 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     setTrayOrder((o) => o.filter((x) => x !== id))
     setLocs((prev) => {
       const loc = prev[id]
-      const cl = clampCenter(block, p.x, p.y, 0, loc.sx, loc.sy)
-      return { ...prev, [id]: { ...loc, zone: 'board', x: cl.x, y: cl.y, rot: 0 } }
+      const cl = clampCenter(block, p.x, p.y, loc.rot, loc.sx, loc.sy)
+      return { ...prev, [id]: { ...loc, zone: 'board', x: cl.x, y: cl.y } }
     })
     drag.current = { id, mode: 'move', offX: 0, offY: 0 }
   }
@@ -389,7 +396,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
       if (!d) return
       const p = toSvg(e)
       if (p.y >= TRAY_Y0 && d.mode === 'move') {
-        setLocs((prev) => ({ ...prev, [d.id]: { ...prev[d.id], zone: 'tray', rot: 0 } }))
+        setLocs((prev) => ({ ...prev, [d.id]: { ...prev[d.id], zone: 'tray' } }))
         setTrayOrder((o) => (o.includes(d.id) ? o : [...o, d.id]))
         setSelected(null)
         return
@@ -456,7 +463,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             <figcaption>Your flag</figcaption>
             <svg className="mini" viewBox={`0 0 ${FLAG_W} ${FLAG_H}`}>
               <clipPath id="flagclip"><rect x="0" y="0" width={FLAG_W} height={FLAG_H} /></clipPath>
-              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="#fff" />
+              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="#fff" stroke="none" />
               <g clipPath="url(#flagclip)">
                 {boardBlocks.map((b) => {
                   const loc = locs[b.id]
@@ -469,7 +476,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
                   )
                 })}
               </g>
-              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" stroke="#d4dae1" strokeWidth="2" />
+              <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" className="frame" strokeWidth="2" />
             </svg>
           </figure>
           <figure>
@@ -492,23 +499,23 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         <svg ref={svgRef} className="board" viewBox={`-20 -20 ${VB_W} ${VB_H}`} onPointerDown={() => setSelected(null)}>
           <defs>
             <pattern id="checker" width="40" height="40" patternUnits="userSpaceOnUse">
-              <rect width="40" height="40" fill="#e9edf2" />
-              <rect width="20" height="20" fill="#dde3ea" />
-              <rect x="20" y="20" width="20" height="20" fill="#dde3ea" />
+              <rect width="40" height="40" className="ck-1" />
+              <rect width="20" height="20" className="ck-2" />
+              <rect x="20" y="20" width="20" height="20" className="ck-2" />
             </pattern>
           </defs>
 
           <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="url(#checker)" />
-          <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" stroke="#9aa6b2" strokeWidth="2" strokeDasharray="8 6" />
+          <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" className="frame" strokeWidth="2" strokeDasharray="8 6" />
 
-          <rect x={TRAY_LEFT - 4} y={TRAY_Y0} width={TRAY_WIDTH + 8} height={TRAY_Y1 - TRAY_Y0} rx="12" fill="#eef1f5" stroke="#d4dae1" />
-          <text x={TRAY_LEFT + 6} y={TRAY_Y0 + 18} fontSize="14" fill="#7b8794">Pieces — drag onto the flag</text>
+          <rect x={TRAY_LEFT - 4} y={TRAY_Y0} width={TRAY_WIDTH + 8} height={TRAY_Y1 - TRAY_Y0} rx="12" className="tray-box" />
+          <text x={TRAY_LEFT + 6} y={TRAY_Y0 + 18} fontSize="14" className="tray-label">Pieces — drag onto the flag</text>
 
           {boardBlocks.map((b) => {
             const loc = locs[b.id]
             const isSel = selected === b.id
             const emblem = b.shape.kind === 'path' || b.shape.kind === 'image'
-            const stroke = isSel ? '#3b82f6' : (emblem ? 'none' : 'rgba(0,0,0,0.18)')
+            const stroke = isSel ? '#3b82f6' : (emblem ? 'none' : 'rgba(125,133,144,0.55)')
             const strokeW = isSel ? 1.5 : 1
             const ey = (dims(b).h / 2) * loc.sy // visible half-height (for rotate handle)
             return (
@@ -530,9 +537,10 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             const b = flag.blocks.find((x) => x.id === id)
             const t = trayLayout[id]
             if (!t) return null
+            const rot = locs[id]?.rot || 0
             return (
-              <g key={id} transform={`translate(${t.x} ${t.y}) scale(${t.scale})`} onPointerDown={(e) => grabTray(e, id)} style={{ cursor: locked ? 'default' : 'grab' }}>
-                <Shape b={b} stroke="rgba(0,0,0,0.25)" strokeW={1 / t.scale} />
+              <g key={id} transform={`translate(${t.x} ${t.y}) scale(${t.scale}) rotate(${rot})`} onPointerDown={(e) => grabTray(e, id)} style={{ cursor: locked ? 'default' : 'grab' }}>
+                <Shape b={b} stroke="rgba(125,133,144,0.55)" strokeW={1} />
               </g>
             )
           })}
