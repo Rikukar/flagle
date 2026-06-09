@@ -385,8 +385,7 @@ body {
 }
 
 .mini.real {
-  background-size: 100% 100% !important;
-  background-position: center !important;
+  object-fit: cover;
 }
 
 .result-actions {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FLAG_W, FLAG_H } from './flags'
+import { flagUrl } from './flagAssets'
 
 const SNAP_ROT_TOL = 12 // snap to nearest 90deg (level) on release — a usability aid only
 
@@ -220,6 +221,12 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
 
   useEffect(() => { reset() }, [reset])
 
+  // Preload the real flag image while the player works, so the score screen is instant.
+  useEffect(() => {
+    const url = flagUrl(flag.code)
+    if (url) { const img = new Image(); img.src = url }
+  }, [flag.code])
+
   const trayLayout = useMemo(() => {
     const items = trayOrder.map((id) => {
       const b = flag.blocks.find((x) => x.id === id)
@@ -328,7 +335,10 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     if (locked) return
     e.stopPropagation()
     setSelected(id)
-    drag.current = { id, mode: 'rotate' }
+    const loc = locs[id]
+    const p = toSvg(e)
+    const a0 = (Math.atan2(p.y - loc.y, p.x - loc.x) * 180) / Math.PI
+    drag.current = { id, mode: 'rotate', cx: loc.x, cy: loc.y, aPrev: a0, rot: loc.rot }
   }
 
   useEffect(() => {
@@ -337,6 +347,15 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
       if (!d) return
       const p = toSvg(e)
       const block = flag.blocks.find((b) => b.id === d.id)
+      if (d.mode === 'rotate') {
+        // accumulate the per-frame angle change (normalized) so dragging is smooth
+        // across the ±180° wrap and grabbing the handle never jumps the rotation
+        const ang = (Math.atan2(p.y - d.cy, p.x - d.cx) * 180) / Math.PI
+        let delta = ang - d.aPrev
+        delta = ((((delta + 180) % 360) + 360) % 360) - 180
+        d.rot += delta
+        d.aPrev = ang
+      }
       setLocs((prev) => {
         const loc = prev[d.id]
         if (!loc) return prev
@@ -345,9 +364,8 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           return { ...prev, [d.id]: { ...loc, zone: 'board', x: cl.x, y: cl.y } }
         }
         if (d.mode === 'rotate') {
-          const ang = Math.atan2(p.y - loc.y, p.x - loc.x) * 180 / Math.PI + 90
-          const cl = clampCenter(block, loc.x, loc.y, ang, loc.sx, loc.sy)
-          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot: ang } }
+          const cl = clampCenter(block, loc.x, loc.y, d.rot, loc.sx, loc.sy)
+          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot: d.rot } }
         }
         // resize: opposite edge/corner stays anchored; grow toward the pointer.
         const nat = dims(block)
@@ -406,9 +424,9 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         setLocs((prev) => {
           const loc = prev[d.id]
           if (!loc) return prev
-          let { rot } = loc
+          let rot = ((loc.rot % 360) + 360) % 360
           const nearest90 = Math.round(rot / 90) * 90
-          if (Math.abs(rot - nearest90) <= SNAP_ROT_TOL) rot = nearest90
+          if (Math.abs(rot - nearest90) <= SNAP_ROT_TOL) rot = nearest90 % 360
           const cl = clampCenter(block, loc.x, loc.y, rot, loc.sx, loc.sy)
           return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot } }
         })
@@ -481,7 +499,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           </figure>
           <figure>
             <figcaption>Real flag</figcaption>
-            <span className={`fi fi-${flag.code} mini real`} />
+            <img className="mini real" src={flagUrl(flag.code)} alt={`Flag of ${flag.name}`} />
           </figure>
         </div>
 
@@ -517,16 +535,20 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             const emblem = b.shape.kind === 'path' || b.shape.kind === 'image'
             const stroke = isSel ? '#3b82f6' : (emblem ? 'none' : 'rgba(125,133,144,0.55)')
             const strokeW = isSel ? 1.5 : 1
-            const ey = (dims(b).h / 2) * loc.sy // visible half-height (for rotate handle)
+            // handle sits above the piece in SCREEN space (not the piece's frame) so it
+            // never reveals which way is "up"; distance = the piece's bounding radius
+            const R = Math.hypot(dims(b).w * loc.sx, dims(b).h * loc.sy) / 2
             return (
-              <g key={b.id} transform={`translate(${loc.x} ${loc.y}) rotate(${loc.rot})`} onPointerDown={(e) => grabBoard(e, b.id)} onPointerMove={(e) => hoverPiece(e, b)} style={{ cursor: locked ? 'default' : 'grab' }}>
-                <g transform={`scale(${loc.sx} ${loc.sy})`}>
-                  <Shape b={b} stroke={stroke} strokeW={strokeW} />
+              <g key={b.id}>
+                <g transform={`translate(${loc.x} ${loc.y}) rotate(${loc.rot})`} onPointerDown={(e) => grabBoard(e, b.id)} onPointerMove={(e) => hoverPiece(e, b)} style={{ cursor: locked ? 'default' : 'grab' }}>
+                  <g transform={`scale(${loc.sx} ${loc.sy})`}>
+                    <Shape b={b} stroke={stroke} strokeW={strokeW} />
+                  </g>
                 </g>
                 {isSel && !locked && (
-                  <g>
-                    <line x1="0" y1={-ey} x2="0" y2={-ey - 24} stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                    <circle cx="0" cy={-ey - 28} r="8" fill="#fff" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} onPointerDown={(e) => startRotate(e, b.id)} />
+                  <g transform={`translate(${loc.x} ${loc.y})`}>
+                    <line x1="0" y1={-R} x2="0" y2={-R - 24} stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                    <circle cx="0" cy={-R - 28} r="8" fill="#fff" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} onPointerDown={(e) => startRotate(e, b.id)} />
                   </g>
                 )}
               </g>
