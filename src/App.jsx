@@ -88,7 +88,9 @@ export default function App() {
   const isLast = idx === rounds.length - 1
 
   const advance = (score) => {
-    const nextScores = score != null ? [...scores, { name: flag.name, score }] : scores
+    // a skipped flag counts as 0 points and still shows in the summary
+    const entry = score != null ? { name: flag.name, score } : { name: flag.name, score: 0, skipped: true }
+    const nextScores = [...scores, entry]
     setScores(nextScores)
     if (isLast) {
       if (mode === 'daily') {
@@ -169,7 +171,10 @@ export default function App() {
           {scores.length > 0 && (
             <ul className="scorelist">
               {scores.map((r, i) => (
-                <li key={i}><span>{r.name}</span><span>{r.score.toFixed(2)}</span></li>
+                <li key={i}>
+                  <span>{r.name}{r.skipped ? ' (skipped)' : ''}</span>
+                  <span className={r.skipped ? 'skipped-score' : ''}>{r.score.toFixed(2)}</span>
+                </li>
               ))}
             </ul>
           )}

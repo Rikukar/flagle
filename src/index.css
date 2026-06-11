@@ -226,6 +226,17 @@ body {
   user-select: none;
 }
 
+/* rotate ring around the selected piece */
+.rotate-ring {
+  stroke: transparent;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><g fill="none" stroke-linecap="round"><path d="M18 11a7 7 0 1 1-2-4.9" stroke="%23000" stroke-width="5"/><path d="M18 11a7 7 0 1 1-2-4.9" stroke="%23fff" stroke-width="2.5"/></g><path d="M16.5 1.2l.4 6-5.4-2.7z" fill="%23000"/><path d="M16.2 2.8l.2 3.4-3-1.5z" fill="%23fff"/></svg>') 11 11, grab;
+  transition: stroke 0.15s ease;
+}
+
+.rotate-ring:hover {
+  stroke: var(--accent-soft);
+}
+
 /* board svg pieces */
 .ck-1 { fill: var(--ck-1); }
 .ck-2 { fill: var(--ck-2); }
@@ -435,6 +446,7 @@ body {
   font-size: 15px;
 }
 .scorelist li span:last-child { font-weight: 700; color: var(--good); }
+.scorelist li span.skipped-score { color: var(--text-muted); }
 
 /* ---------- responsive ---------- */
 @media (max-width: 820px) {

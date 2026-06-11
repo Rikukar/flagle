@@ -1,4 +1,13 @@
 import mxEmblem from './emblems/mx.svg'
+import usStripes from './emblems/us-stripes.svg'
+import usStars from './emblems/us-stars.svg'
+import grStripes from './emblems/gr-stripes.svg'
+import cmStar from './emblems/cm-star.svg'
+import brGlobe from './emblems/br-globe.svg'
+import esArms from './emblems/es-arms.svg'
+import ptEmblem from './emblems/pt-emblem.svg'
+import krTaegeuk from './emblems/kr-taegeuk.svg'
+import krTrigrams from './emblems/kr-trigrams.svg'
 
 // Flag specs in a 640 x 480 (4:3) coordinate space — the same proportions
 // flag-icons uses, so emblems extracted from those SVGs would line up later.
@@ -124,10 +133,9 @@ export const FLAGS = [
         sym: 180,
       },
       {
-        // Disc diameter = 3/5 of the flag height (official spec).
         id: 'jp-disc',
-        color: '#BC002D',
-        shape: { kind: 'circle', r: (FLAG_H * 3 / 5) / 2 },
+        color: '#bc002d',
+        shape: { kind: 'circle', r: 149.2 },
         target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 },
         sym: 'full',
       },
@@ -139,25 +147,25 @@ export const FLAGS = [
     name: 'Canada',
     blocks: [
       {
-        // White centre field (1:2:1 construction).
+        // White centre field (flag-icons' exact construction).
         id: 'ca-white',
         color: '#ffffff',
-        shape: { kind: 'rect', w: FLAG_W / 2, h: FLAG_H },
+        shape: { kind: 'rect', w: 339.8, h: FLAG_H },
         target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 },
         sym: 180,
       },
       {
         id: 'ca-bar-left',
         color: '#d52b1e',
-        shape: { kind: 'rect', w: FLAG_W / 4, h: FLAG_H },
-        target: { x: FLAG_W / 8, y: FLAG_H / 2, rot: 0 },
+        shape: { kind: 'rect', w: 150, h: FLAG_H },
+        target: { x: 75, y: FLAG_H / 2, rot: 0 },
         sym: 180,
       },
       {
         id: 'ca-bar-right',
         color: '#d52b1e',
-        shape: { kind: 'rect', w: FLAG_W / 4, h: FLAG_H },
-        target: { x: FLAG_W * 7 / 8, y: FLAG_H / 2, rot: 0 },
+        shape: { kind: 'rect', w: 150.2, h: FLAG_H },
+        target: { x: 564.9, y: FLAG_H / 2, rot: 0 },
         sym: 180,
       },
       {
@@ -271,26 +279,26 @@ export const FLAGS = [
   {
     id: 'th', code: 'th', name: 'Thailand',
     blocks: [
-      hband('th-red1', '#A51931', 40, 80),
-      hband('th-white1', '#F4F5F8', 120, 80),
-      hband('th-blue', '#2D2A4A', 240, 160),
-      hband('th-white2', '#F4F5F8', 360, 80),
-      hband('th-red2', '#A51931', 440, 80),
+      hband('th-red1', '#a51931', 41.25, 82.5),
+      hband('th-white1', '#f4f5f8', 122.5, 80),
+      hband('th-blue', '#2d2a4a', 242.5, 160),
+      hband('th-white2', '#f4f5f8', 361.25, 77.5),
+      hband('th-red2', '#a51931', 440, 80),
     ],
   },
 
   // ---- Nordic crosses (off-centre cross) ----
   {
     id: 'se', code: 'se', name: 'Sweden',
-    blocks: [field('se-field', '#005293'), vbar('se-cross-v', '#fecb00', 240, 80), hband('se-cross-h', '#fecb00', 240, 96)],
+    blocks: [field('se-field', '#005293'), vbar('se-cross-v', '#fecb00', 224, 96), hband('se-cross-h', '#fecb00', 240, 96)],
   },
   {
     id: 'dk', code: 'dk', name: 'Denmark',
-    blocks: [field('dk-field', '#C8102E'), vbar('dk-cross-v', '#ffffff', 242, 69), hband('dk-cross-h', '#ffffff', 240, 69)],
+    blocks: [field('dk-field', '#c8102e'), vbar('dk-cross-v', '#ffffff', 240, 68.6), hband('dk-cross-h', '#ffffff', 240, 68.6)],
   },
   {
     id: 'fi', code: 'fi', name: 'Finland',
-    blocks: [field('fi-field', '#ffffff'), vbar('fi-cross-v', '#002f6c', 231, 107), hband('fi-cross-h', '#002f6c', 240, 131)],
+    blocks: [field('fi-field', '#ffffff'), vbar('fi-cross-v', '#002f6c', 240.9, 131), hband('fi-cross-h', '#002f6c', 240, 131)],
   },
 
   // ---- field + disc ----
@@ -298,7 +306,7 @@ export const FLAGS = [
     id: 'bd', code: 'bd', name: 'Bangladesh',
     blocks: [
       field('bd-field', '#006A4E'),
-      { id: 'bd-disc', color: '#F42A41', shape: { kind: 'circle', r: 96 }, target: { x: 288, y: 240, rot: 0 }, sym: 'full' },
+      { id: 'bd-disc', color: '#f42a41', shape: { kind: 'circle', r: 160 }, target: { x: 280, y: 240, rot: 0 }, sym: 'full' },
     ],
   },
 
@@ -309,12 +317,12 @@ export const FLAGS = [
       hband('ae-green', '#00732f', 80, 160),
       hband('ae-white', '#ffffff', 240, 160),
       hband('ae-black', '#000000', 400, 160),
-      vbar('ae-red', '#ff0000', 80, 160),
+      vbar('ae-red', '#ff0000', 110, 220),
     ],
   },
 
   // ---- more horizontal bands ----
-  { id: 'ye', code: 'ye', name: 'Yemen', blocks: [hstripe('ye-red', '#f10600', 0), hstripe('ye-white', '#ffffff', 1), hstripe('ye-black', '#000000', 2)] },
+  { id: 'ye', code: 'ye', name: 'Yemen', blocks: [hband('ye-red', '#f10600', 78.7, 157.4), hband('ye-white', '#ffffff', 240, 165.2), hband('ye-black', '#000000', 401.3, 157.4)] },
   {
     id: 'lv', code: 'lv', name: 'Latvia',
     blocks: [hband('lv-red1', '#981e32', 96, 192), hband('lv-white', '#ffffff', 240, 96), hband('lv-red2', '#981e32', 384, 192)],
@@ -351,7 +359,7 @@ export const FLAGS = [
   // ---- field + disc ----
   {
     id: 'pw', code: 'pw', name: 'Palau',
-    blocks: [field('pw-field', '#4aadd6'), disc('pw-disc', '#ffde00', 200, 232, 133)],
+    blocks: [field('pw-field', '#4aadd6'), disc('pw-disc', '#ffde00', 270.1, 232.1, 134.6)],
   },
   {
     id: 'la', code: 'la', name: 'Laos',
@@ -370,5 +378,254 @@ export const FLAGS = [
   {
     id: 'bw', code: 'bw', name: 'Botswana',
     blocks: [field('bw-field', '#00cbff'), hband('bw-white', '#ffffff', 240, 160), hband('bw-black', '#000000', 240, 108)],
+  },
+
+  // ---- USA: stripes (one piece), canton, star field (one piece) ----
+  {
+    id: 'us', code: 'us', name: 'United States',
+    blocks: [
+      {
+        // All 13 stripes as a single piece, extracted from flag-icons' us.svg.
+        id: 'us-stripes',
+        shape: { kind: 'image', href: usStripes, w: FLAG_W, h: FLAG_H },
+        target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 },
+        sym: 180, // the stripe pattern reads the same upside down
+      },
+      box('us-canton', '#192f5d', 182.4, 129.25, 364.8, 258.5),
+      {
+        // All 50 stars as a single piece (real star grid from us.svg).
+        id: 'us-stars',
+        shape: { kind: 'image', href: usStars, w: 364.8, h: 258.5 },
+        target: { x: 182.4, y: 129.25, rot: 0 },
+        sym: 360,
+      },
+    ],
+  },
+
+  // ---- centred crosses ----
+  {
+    id: 'ch', code: 'ch', name: 'Switzerland',
+    blocks: [field('ch-field', '#ff0000'), box('ch-cross-h', '#ffffff', 320, 240, 300, 90), box('ch-cross-v', '#ffffff', 320, 240, 90, 300)],
+  },
+
+  // ---- Greece: striped background (one piece) + canton + cross ----
+  {
+    id: 'gr', code: 'gr', name: 'Greece',
+    blocks: [
+      {
+        // All 9 stripes as a single piece, like the US flag's stripes.
+        id: 'gr-stripes',
+        shape: { kind: 'image', href: grStripes, w: FLAG_W, h: FLAG_H },
+        target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 },
+        sym: 180, // blue top & bottom — reads the same upside down
+      },
+      box('gr-canton', '#0d5eaf', 133.35, 133.35, 266.7, 266.7),
+      box('gr-cross-v', '#ffffff', 133.35, 133.35, 53.3, 266.7),
+      box('gr-cross-h', '#ffffff', 133.35, 133.35, 266.7, 53.3),
+    ],
+  },
+
+  // ---- weighted bands ----
+  {
+    id: 'co', code: 'co', name: 'Colombia',
+    blocks: [hband('co-yellow', '#ffe800', 120, 240), hband('co-blue', '#00148e', 300, 120), hband('co-red', '#da0010', 420, 120)],
+  },
+  { id: 'mc', code: 'mc', name: 'Monaco', blocks: [hstripe('mc-red', '#f31830', 0, 2), hstripe('mc-white', '#ffffff', 1, 2)] },
+  { id: 'pe', code: 'pe', name: 'Peru', blocks: [vstripe('pe-red1', '#D91023', 0), vstripe('pe-white', '#ffffff', 1), vstripe('pe-red2', '#D91023', 2)] },
+
+  // ---- triangle flags (real triangle paths from flag-icons) ----
+  {
+    id: 'cz', code: 'cz', name: 'Czechia',
+    blocks: [
+      hstripe('cz-white', '#ffffff', 0, 2),
+      hstripe('cz-red', '#d7141a', 1, 2),
+      { id: 'cz-tri', color: '#11457e', shape: { kind: 'path', d: 'M360 240 0 0v480z', cx: 180, cy: 240, half: 240 }, target: { x: 180, y: 240, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'sd', code: 'sd', name: 'Sudan',
+    blocks: [
+      hstripe('sd-red', '#ff0000', 0),
+      hstripe('sd-white', '#ffffff', 1),
+      hstripe('sd-black', '#000000', 2),
+      { id: 'sd-tri', color: '#009a00', shape: { kind: 'path', d: 'M0 0v512l341.3-256z', cx: 160, cy: 240, half: 240, pre: 'scale(0.9375)' }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'ps', code: 'ps', name: 'Palestine',
+    blocks: [
+      hstripe('ps-black', '#000000', 0),
+      hstripe('ps-white', '#ffffff', 1),
+      hstripe('ps-green', '#009639', 2),
+      { id: 'ps-tri', color: '#ed2e38', shape: { kind: 'path', d: 'm0 0 320 240L0 480Z', cx: 160, cy: 240, half: 240 }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'kw', code: 'kw', name: 'Kuwait',
+    blocks: [
+      hstripe('kw-green', '#00d941', 0),
+      hstripe('kw-white', '#ffffff', 1),
+      hstripe('kw-red', '#f31830', 2),
+      { id: 'kw-trap', color: '#000000', shape: { kind: 'path', d: 'M0 0v512l255.4-170.7.6-170.8z', cx: 120, cy: 240, half: 240, pre: 'scale(0.9375)' }, target: { x: 120, y: 240, rot: 0 }, sym: 360 },
+    ],
+  },
+
+  // ---- star flags (real star paths; a 5-point star repeats every 72°) ----
+  {
+    id: 'vn', code: 'vn', name: 'Vietnam',
+    blocks: [
+      field('vn-field', '#da251d'),
+      { id: 'vn-star', color: '#ffff00', shape: { kind: 'path', d: 'M349.6 381 260 314.3l-89 67.3L204 272l-89-67.7 110.1-1 34.2-109.4L294 203l110.1.1-88.5 68.4 33.9 109.6z', cx: 323.3, cy: 222.9, half: 135.5, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 323.3, y: 222.9, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'so', code: 'so', name: 'Somalia',
+    blocks: [
+      field('so-field', '#40a6ff'),
+      { id: 'so-star', color: '#ffffff', shape: { kind: 'path', d: 'M336.5 381.2 254 327.7l-82.1 54 30.5-87.7-82-54.2L222 239l31.4-87.5 32.1 87.3 101.4.1-81.5 54.7z', cx: 317.8, cy: 249.9, half: 124.9, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 317.8, y: 249.9, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'gh', code: 'gh', name: 'Ghana',
+    blocks: [
+      hstripe('gh-red', '#ce1126', 0),
+      hstripe('gh-yellow', '#fcd116', 1),
+      hstripe('gh-green', '#006b3f', 2),
+      { id: 'gh-star', color: '#000000', shape: { kind: 'path', d: 'm320 160 52 160-136.1-98.9H404L268 320z', cx: 320, cy: 240, half: 84 }, target: { x: 320, y: 240, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'sn', code: 'sn', name: 'Senegal',
+    blocks: [
+      vstripe('sn-green', '#0b7226', 0),
+      vstripe('sn-yellow', '#ffff00', 1),
+      vstripe('sn-red', '#bc0000', 2),
+      { id: 'sn-star', color: '#0b7226', shape: { kind: 'path', d: 'M342 218.8h71.8l-56.6 43.6 20.7 69.3-56.6-43.6-56.6 41.6 20.7-67.3-56.6-43.6h69.8l22.7-71.3z', cx: 321.3, cy: 239.6, half: 92.5 }, target: { x: 321.3, y: 239.6, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'bf', code: 'bf', name: 'Burkina Faso',
+    blocks: [
+      hstripe('bf-red', '#de0000', 0, 2),
+      hstripe('bf-green', '#35a100', 1, 2),
+      { id: 'bf-star', color: '#fff300', shape: { kind: 'path', d: 'm254.6 276.2-106-72.4h131L320 86.6 360.4 204l131-.1-106 72.4 40.5 117.3-106-72.6L214 393.4', cx: 320, cy: 240.1, half: 171.4 }, target: { x: 320, y: 240.1, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'cl', code: 'cl', name: 'Chile',
+    blocks: [
+      box('cl-white', '#ffffff', 440, 120, 400, 240),
+      box('cl-canton', '#0039a6', 120, 120, 240, 240),
+      hband('cl-red', '#d52b1e', 360, 240),
+      { id: 'cl-star', color: '#ffffff', shape: { kind: 'path', d: 'M167.8 191.7 128.2 162l-39.5 30 14.7-48.8L64 113.1l48.7-.5L127.8 64l15.5 48.5 48.7.1-39.2 30.4z', cx: 120, cy: 120, half: 60, pre: 'scale(0.9375)' }, target: { x: 120, y: 120, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'tg', code: 'tg', name: 'Togo',
+    blocks: [
+      hstripe('tg-g1', '#118600', 0, 5),
+      hstripe('tg-y1', '#ffe300', 1, 5),
+      hstripe('tg-g2', '#118600', 2, 5),
+      hstripe('tg-y2', '#ffe300', 3, 5),
+      hstripe('tg-g3', '#118600', 4, 5),
+      box('tg-canton', '#d80000', 143.7, 145.6, 287.3, 291.2),
+      { id: 'tg-star', color: '#ffffff', shape: { kind: 'path', d: 'M134.4 128.4c0-.8 18.9-53 18.9-53l17 52.2s57.4 1.7 57.4.8-45.3 34.3-45.3 34.3 21.4 60 20.5 58.2-49.6-36-49.6-36-49.7 34.3-48.8 34.3c.8 0 18.8-56.5 18.8-56.5l-44.5-33.4z', cx: 143.7, cy: 138.9, half: 69.8, pre: 'scale(0.9375)' }, target: { x: 143.7, y: 138.9, rot: 0 }, sym: 72 },
+    ],
+  },
+
+  // ---- crescent flags ----
+  {
+    id: 'tr', code: 'tr', name: 'Turkey',
+    blocks: [
+      field('tr-field', '#e30a17'),
+      { id: 'tr-disc-w', color: '#ffffff', shape: { kind: 'path', d: 'M407 247.5c0 66.2-54.6 119.9-122 119.9s-122-53.7-122-120 54.6-119.8 122-119.8 122 53.7 122 119.9', cx: 285, cy: 247.5, half: 122 }, target: { x: 285, y: 247.5, rot: 0 }, sym: 'full' },
+      { id: 'tr-disc-r', color: '#e30a17', shape: { kind: 'path', d: 'M413 247.5c0 53-43.6 95.9-97.5 95.9s-97.6-43-97.6-96 43.7-95.8 97.6-95.8 97.6 42.9 97.6 95.9z', cx: 315.5, cy: 247.5, half: 97.6 }, target: { x: 315.5, y: 247.5, rot: 0 }, sym: 'full' },
+      { id: 'tr-star', color: '#ffffff', shape: { kind: 'path', d: 'm430.7 191.5-1 44.3-41.3 11.2 40.8 14.5-1 40.7 26.5-31.8 40.2 14-23.2-34.1 28.3-33.9-43.5 12-25.8-37z', cx: 444.2, cy: 246.8, half: 55.8 }, target: { x: 444.2, y: 246.8, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'tn', code: 'tn', name: 'Tunisia',
+    blocks: [
+      field('tn-field', '#e70013'),
+      { id: 'tn-emblem', color: '#ffffff', shape: { kind: 'path', d: 'M320 119.2a1 1 0 0 0-1 240.3 1 1 0 0 0 1-240.3M392 293a90 90 0 1 1 0-107 72 72 0 1 0 0 107m-4.7-21.7-37.4-12.1-23.1 31.8v-39.3l-37.4-12.2 37.4-12.2V188l23.1 31.8 37.4-12.1-23.1 31.8z', cx: 319.5, cy: 239.4, half: 120.2 }, target: { x: 319.5, y: 239.4, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'pk', code: 'pk', name: 'Pakistan',
+    blocks: [
+      field('pk-field', '#0c590b'),
+      box('pk-hoist', '#ffffff', 70.2, 240, 140.4, 480),
+      { id: 'pk-crescent', color: '#ffffff', shape: { kind: 'path', d: 'M415.4 306a121 121 0 0 1-161.3 59.4 122 122 0 0 1-59.5-162.1A119 119 0 0 1 266 139a156 156 0 0 0-11.8 10.9A112.3 112.3 0 0 0 415.5 306z', cx: 329.7, cy: 241.8, half: 111.5, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 329.7, y: 241.8, rot: 0 }, sym: 360 },
+      { id: 'pk-star', color: '#ffffff', shape: { kind: 'path', d: 'm403.7 225.4-31.2-6.6-16.4 27.3-3.4-31.6-31-7.2 29-13-2.7-31.7 21.4 23.6 29.3-12.4-15.9 27.6 21 24z', cx: 389.1, cy: 191.6, half: 39.2, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 389.1, y: 191.6, rot: 0 }, sym: 72 },
+    ],
+  },
+
+  // ---- weighted bands ----
+  {
+    id: 'cr', code: 'cr', name: 'Costa Rica',
+    blocks: [
+      hband('cr-blue1', '#0000b4', 37.7, 75.4),
+      hband('cr-white1', '#ffffff', 116.6, 82.3),
+      hband('cr-red', '#d90000', 236.6, 157.7),
+      hband('cr-white2', '#ffffff', 356.6, 82.3),
+      hband('cr-blue2', '#0000b4', 438.9, 82.3),
+    ],
+  },
+
+  // ---- China: real unit-star path, 5 pieces (small stars have rotated targets) ----
+  {
+    id: 'cn', code: 'cn', name: 'China',
+    blocks: [
+      field('cn-field', '#ee1c25'),
+      { id: 'cn-star-big', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -7.2, half: 72, pre: 'scale(72)' }, target: { x: 120, y: 112.8, rot: 0 }, sym: 72 },
+      { id: 'cn-star-1', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 238.2, y: 49.2, rot: -120.93 }, sym: 72 },
+      { id: 'cn-star-2', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 285.6, y: 96.1, rot: -98.11 }, sym: 72 },
+      { id: 'cn-star-3', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 285.7, y: 167.3, rot: -74.04 }, sym: 72 },
+      { id: 'cn-star-4', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 238.1, y: 214.5, rot: -51.32 }, sym: 72 },
+    ],
+  },
+
+  // ---- emblem flags (real extracted artwork) ----
+  {
+    id: 'cm', code: 'cm', name: 'Cameroon',
+    blocks: [
+      vstripe('cm-green', '#007a5e', 0),
+      vstripe('cm-red', '#ce1126', 1),
+      vstripe('cm-yellow', '#fcd116', 2),
+      { id: 'cm-star', shape: { kind: 'image', href: cmStar, w: 119.2, h: 113.4 }, target: { x: 320, y: 239.8, rot: 0 }, sym: 72 },
+    ],
+  },
+  {
+    id: 'br', code: 'br', name: 'Brazil',
+    blocks: [
+      field('br-field', '#229e45'),
+      { id: 'br-rhombus', color: '#f8e509', shape: { kind: 'path', d: 'm321.4 436 301.5-195.7L319.6 44 17.1 240.7z', cx: 320, cy: 240, half: 303 }, target: { x: 320, y: 240, rot: 0 }, sym: 180 },
+      { id: 'br-globe', shape: { kind: 'image', href: brGlobe, w: 254.8, h: 254.8 }, target: { x: 325.4, y: 239.9, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'es', code: 'es', name: 'Spain',
+    blocks: [
+      hband('es-red1', '#AA151B', 60, 120),
+      hband('es-yellow', '#F1BF00', 240, 240),
+      hband('es-red2', '#AA151B', 420, 120),
+      { id: 'es-arms', shape: { kind: 'image', href: esArms, w: 181.3, h: 181.3 }, target: { x: 206.3, y: 240, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'pt', code: 'pt', name: 'Portugal',
+    blocks: [
+      vbar('pt-green', '#006600', 128, 256),
+      vbar('pt-red', '#ff0000', 448, 384),
+      { id: 'pt-emblem', shape: { kind: 'image', href: ptEmblem, w: 213.8, h: 214.7 }, target: { x: 255.9, y: 240.2, rot: 0 }, sym: 360 },
+    ],
+  },
+  {
+    id: 'kr', code: 'kr', name: 'South Korea',
+    blocks: [
+      field('kr-field', '#ffffff'),
+      { id: 'kr-taegeuk', shape: { kind: 'image', href: krTaegeuk, w: 332.8, h: 332.8 }, target: { x: 319.7, y: 240.2, rot: 0 }, sym: 360 },
+      { id: 'kr-trigrams', shape: { kind: 'image', href: krTrigrams, w: 507.5, h: 396.6 }, target: { x: 323.9, y: 241.6, rot: 0 }, sym: 360 },
+    ],
   },
 ]

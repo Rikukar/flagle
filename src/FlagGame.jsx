@@ -172,10 +172,12 @@ function Shape({ b, stroke, strokeW }) {
     )
   }
   if (s.kind === 'path') {
+    // s.pre (optional) maps the raw path coords into 640x480 flag space, for
+    // sources whose SVGs use a different internal coordinate system.
     return (
       <>
         <rect x={-s.half} y={-s.half} width={2 * s.half} height={2 * s.half} fill="transparent" />
-        <path d={s.d} transform={`translate(${-s.cx} ${-s.cy})`} fill={b.color} stroke={stroke === 'none' ? undefined : stroke} strokeWidth={stroke === 'none' ? 0 : strokeW} vectorEffect={ve} />
+        <path d={s.d} transform={`translate(${-s.cx} ${-s.cy})${s.pre ? ' ' + s.pre : ''}`} fill={b.color} stroke={stroke === 'none' ? undefined : stroke} strokeWidth={stroke === 'none' ? 0 : strokeW} vectorEffect={ve} />
       </>
     )
   }
@@ -220,6 +222,32 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
   }, [flag])
 
   useEffect(() => { reset() }, [reset])
+
+  // Scroll wheel rotates the selected piece (3° per notch, snapping when close to level).
+  const selectedRef = useRef(null)
+  useEffect(() => { selectedRef.current = selected }, [selected])
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const onWheel = (e) => {
+      const id = selectedRef.current
+      if (!id || score !== null) return
+      e.preventDefault()
+      const block = flag.blocks.find((b) => b.id === id)
+      setLocs((prev) => {
+        const loc = prev[id]
+        if (!loc || loc.zone !== 'board') return prev
+        let rot = loc.rot + (e.deltaY > 0 ? 3 : -3)
+        const n90 = Math.round(rot / 90) * 90
+        if (Math.abs(rot - n90) < 2.99) rot = n90 // gentle level-snap, escapable on the next notch
+        rot = ((rot % 360) + 360) % 360
+        const cl = clampCenter(block, loc.x, loc.y, rot, loc.sx, loc.sy)
+        return { ...prev, [id]: { ...loc, x: cl.x, y: cl.y, rot } }
+      })
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [flag, score])
 
   // Preload the real flag image while the player works, so the score screen is instant.
   useEffect(() => {
@@ -316,19 +344,18 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     e.currentTarget.style.cursor = cursorFor(block, lx, ly, u, v, hw0, hh0)
   }
 
-  const grabTray = (e, id) => {
+  // Click a tray piece to place it on the flag (centered), ready to position.
+  const placeFromTray = (e, id) => {
     if (locked) return
     e.stopPropagation()
-    setSelected(id)
-    const p = toSvg(e)
     const block = flag.blocks.find((b) => b.id === id)
     setTrayOrder((o) => o.filter((x) => x !== id))
     setLocs((prev) => {
       const loc = prev[id]
-      const cl = clampCenter(block, p.x, p.y, loc.rot, loc.sx, loc.sy)
+      const cl = clampCenter(block, FLAG_W / 2, FLAG_H / 2, loc.rot, loc.sx, loc.sy)
       return { ...prev, [id]: { ...loc, zone: 'board', x: cl.x, y: cl.y } }
     })
-    drag.current = { id, mode: 'move', offX: 0, offY: 0 }
+    setSelected(id)
   }
 
   const startRotate = (e, id) => {
@@ -456,7 +483,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
       total += bestGroupAccuracy(blocks[0], blocks.map((b) => locs[b.id]), blocks.map((b) => b.target))
     }
     const mean = total / flag.blocks.length
-    const s = Math.round((1 + 9 * mean) * 100) / 100
+    const s = Math.round(mean * 10 * 100) / 100 // 0.00–10.00
     setScore(s)
     setSelected(null)
   }
@@ -527,7 +554,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           <rect x="0" y="0" width={FLAG_W} height={FLAG_H} fill="none" className="frame" strokeWidth="2" strokeDasharray="8 6" />
 
           <rect x={TRAY_LEFT - 4} y={TRAY_Y0} width={TRAY_WIDTH + 8} height={TRAY_Y1 - TRAY_Y0} rx="12" className="tray-box" />
-          <text x={TRAY_LEFT + 6} y={TRAY_Y0 + 18} fontSize="14" className="tray-label">Pieces — drag onto the flag</text>
+          <text x={TRAY_LEFT + 6} y={TRAY_Y0 + 18} fontSize="14" className="tray-label">Pieces — click to place on the flag</text>
 
           {boardBlocks.map((b) => {
             const loc = locs[b.id]
@@ -547,8 +574,15 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
                 </g>
                 {isSel && !locked && (
                   <g transform={`translate(${loc.x} ${loc.y})`}>
-                    <line x1="0" y1={-R} x2="0" y2={-R - 24} stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                    <circle cx="0" cy={-R - 28} r="8" fill="#fff" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} onPointerDown={(e) => startRotate(e, b.id)} />
+                    {/* invisible rotate ring: grab just outside the piece and drag around it */}
+                    <circle
+                      className="rotate-ring"
+                      r={R + 14}
+                      fill="none"
+                      strokeWidth="26"
+                      pointerEvents="stroke"
+                      onPointerDown={(e) => startRotate(e, b.id)}
+                    />
                   </g>
                 )}
               </g>
@@ -561,7 +595,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
             if (!t) return null
             const rot = locs[id]?.rot || 0
             return (
-              <g key={id} transform={`translate(${t.x} ${t.y}) scale(${t.scale}) rotate(${rot})`} onPointerDown={(e) => grabTray(e, id)} style={{ cursor: locked ? 'default' : 'grab' }}>
+              <g key={id} transform={`translate(${t.x} ${t.y}) scale(${t.scale}) rotate(${rot})`} onPointerDown={(e) => placeFromTray(e, id)} style={{ cursor: locked ? 'default' : 'pointer' }}>
                 <Shape b={b} stroke="rgba(125,133,144,0.55)" strokeW={1} />
               </g>
             )
@@ -573,7 +607,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         <span className="round-label">{roundLabel}</span>
         <h2>{flag.name}</h2>
 
-        <p className="hint">Drag pieces from the tray and match the real flag as closely as you can — <strong>position, rotation, and size</strong> all count. Pieces start at random sizes: drag the middle of a piece to move it, grab an <strong>edge</strong> to resize that side, or a <strong>corner</strong> to resize evenly (symbols always resize evenly). Use the dot above a piece to rotate. Submit to score from 1.00 to 10.00.</p>
+        <p className="hint">Click a piece in the tray to place it on the flag, then match the real flag as closely as you can — <strong>position, rotation, and size</strong> all count. Pieces start at random sizes: drag the middle of a piece to move it, grab an <strong>edge</strong> to resize that side, or a <strong>corner</strong> to resize evenly (symbols always resize evenly). To rotate, drag just outside a selected piece or use the scroll wheel. Submit to score from 0.00 to 10.00.</p>
 
         <p className="status">{placedCount} / {flag.blocks.length} placed</p>
 
