@@ -207,6 +207,64 @@ body {
   align-items: start;
 }
 
+.game.with-controls {
+  grid-template-columns: 190px 1fr 280px;
+}
+
+/* ---------- piece controls (left panel) ---------- */
+.controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 16px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 16px;
+}
+
+.controls-title {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.controls-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ctl {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.ctl-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.ctl-label em {
+  font-style: normal;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctl input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .board-wrap {
   position: relative;
   background: var(--surface);
@@ -449,7 +507,8 @@ body {
 .scorelist li span.skipped-score { color: var(--text-muted); }
 
 /* ---------- responsive ---------- */
-@media (max-width: 820px) {
-  .game { grid-template-columns: 1fr; }
+@media (max-width: 1020px) {
+  .game, .game.with-controls { grid-template-columns: 1fr; }
+  .controls { position: static; }
   .mode-grid { grid-template-columns: 1fr; }
 }

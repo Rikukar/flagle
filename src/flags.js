@@ -2,6 +2,7 @@ import mxEmblem from './emblems/mx.svg'
 import usStripes from './emblems/us-stripes.svg'
 import usStars from './emblems/us-stars.svg'
 import grStripes from './emblems/gr-stripes.svg'
+import tgStripes from './emblems/tg-stripes.svg'
 import cmStar from './emblems/cm-star.svg'
 import brGlobe from './emblems/br-globe.svg'
 import esArms from './emblems/es-arms.svg'
@@ -15,7 +16,8 @@ import krTrigrams from './emblems/kr-trigrams.svg'
 // Each block has:
 //   shape:  { kind: 'rect', w, h }
 //         | { kind: 'circle', r }
-//         | { kind: 'path', d, cx, cy, half }  — a real emblem path (640x480 space)
+//         | { kind: 'path', d, cx, cy, w, h }  — a real emblem path; (cx,cy) is its
+//             bbox center and w/h its true bbox size (640x480 space)
 //         | { kind: 'image', href, w, h }       — a real multi-color emblem asset
 //   color:  fill
 //   target: { x, y, rot }  — the CORRECT center position + rotation (degrees)
@@ -175,12 +177,13 @@ export const FLAGS = [
         color: '#d52b1e',
         shape: {
           kind: 'path',
-          cx: 320,
-          cy: 240,
-          half: 165,
+          cx: 311.1,
+          cy: 242.3,
+          w: 246.8,
+          h: 326.4,
           d: 'M201 232l-13.3 4.4 61.4 54c4.7 13.7-1.6 17.8-5.6 25l66.6-8.4-1.6 67 13.9-.3-3.1-66.6 66.7 8c-4.1-8.7-7.8-13.3-4-27.2l61.3-51-10.7-4c-8.8-6.8 3.8-32.6 5.6-48.9 0 0-35.7 12.3-38 5.8l-9.2-17.5-32.6 35.8c-3.5.9-5-.5-5.9-3.5l15-74.8-23.8 13.4q-3.2 1.3-5.2-2.2l-23-46-23.6 47.8q-2.8 2.5-5 .7L264 130.8l13.7 74.1c-1.1 3-3.7 3.8-6.7 2.2l-31.2-35.3c-4 6.5-6.8 17.1-12.2 19.5s-23.5-4.5-35.6-7c4.2 14.8 17 39.6 9 47.7',
         },
-        target: { x: 320, y: 240, rot: 0 },
+        target: { x: 311.1, y: 242.3, rot: 0 },
         sym: 360,
       },
     ],
@@ -439,7 +442,7 @@ export const FLAGS = [
     blocks: [
       hstripe('cz-white', '#ffffff', 0, 2),
       hstripe('cz-red', '#d7141a', 1, 2),
-      { id: 'cz-tri', color: '#11457e', shape: { kind: 'path', d: 'M360 240 0 0v480z', cx: 180, cy: 240, half: 240 }, target: { x: 180, y: 240, rot: 0 }, sym: 360 },
+      { id: 'cz-tri', color: '#11457e', shape: { kind: 'path', d: 'M360 240 0 0v480z', cx: 180, cy: 240, w: 360, h: 480 }, target: { x: 180, y: 240, rot: 0 }, sym: 360 },
     ],
   },
   {
@@ -448,7 +451,7 @@ export const FLAGS = [
       hstripe('sd-red', '#ff0000', 0),
       hstripe('sd-white', '#ffffff', 1),
       hstripe('sd-black', '#000000', 2),
-      { id: 'sd-tri', color: '#009a00', shape: { kind: 'path', d: 'M0 0v512l341.3-256z', cx: 160, cy: 240, half: 240, pre: 'scale(0.9375)' }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
+      { id: 'sd-tri', color: '#009a00', shape: { kind: 'path', d: 'M0 0v512l341.3-256z', cx: 160, cy: 240, w: 320, h: 480, pre: 'scale(0.9375)' }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
     ],
   },
   {
@@ -457,7 +460,7 @@ export const FLAGS = [
       hstripe('ps-black', '#000000', 0),
       hstripe('ps-white', '#ffffff', 1),
       hstripe('ps-green', '#009639', 2),
-      { id: 'ps-tri', color: '#ed2e38', shape: { kind: 'path', d: 'm0 0 320 240L0 480Z', cx: 160, cy: 240, half: 240 }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
+      { id: 'ps-tri', color: '#ed2e38', shape: { kind: 'path', d: 'm0 0 320 240L0 480Z', cx: 160, cy: 240, w: 320, h: 480 }, target: { x: 160, y: 240, rot: 0 }, sym: 360 },
     ],
   },
   {
@@ -466,7 +469,7 @@ export const FLAGS = [
       hstripe('kw-green', '#00d941', 0),
       hstripe('kw-white', '#ffffff', 1),
       hstripe('kw-red', '#f31830', 2),
-      { id: 'kw-trap', color: '#000000', shape: { kind: 'path', d: 'M0 0v512l255.4-170.7.6-170.8z', cx: 120, cy: 240, half: 240, pre: 'scale(0.9375)' }, target: { x: 120, y: 240, rot: 0 }, sym: 360 },
+      { id: 'kw-trap', color: '#000000', shape: { kind: 'path', d: 'M0 0v512l255.4-170.7.6-170.8z', cx: 120, cy: 240, w: 240, h: 480, pre: 'scale(0.9375)' }, target: { x: 120, y: 240, rot: 0 }, sym: 360 },
     ],
   },
 
@@ -475,14 +478,14 @@ export const FLAGS = [
     id: 'vn', code: 'vn', name: 'Vietnam',
     blocks: [
       field('vn-field', '#da251d'),
-      { id: 'vn-star', color: '#ffff00', shape: { kind: 'path', d: 'M349.6 381 260 314.3l-89 67.3L204 272l-89-67.7 110.1-1 34.2-109.4L294 203l110.1.1-88.5 68.4 33.9 109.6z', cx: 323.3, cy: 222.9, half: 135.5, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 323.3, y: 222.9, rot: 0 }, sym: 72 },
+      { id: 'vn-star', color: '#ffff00', shape: { kind: 'path', d: 'M349.6 381 260 314.3l-89 67.3L204 272l-89-67.7 110.1-1 34.2-109.4L294 203l110.1.1-88.5 68.4 33.9 109.6z', cx: 323.3, cy: 222.9, w: 271, h: 269.7, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 323.3, y: 222.9, rot: 0 }, sym: 72 },
     ],
   },
   {
     id: 'so', code: 'so', name: 'Somalia',
     blocks: [
       field('so-field', '#40a6ff'),
-      { id: 'so-star', color: '#ffffff', shape: { kind: 'path', d: 'M336.5 381.2 254 327.7l-82.1 54 30.5-87.7-82-54.2L222 239l31.4-87.5 32.1 87.3 101.4.1-81.5 54.7z', cx: 317.8, cy: 249.9, half: 124.9, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 317.8, y: 249.9, rot: 0 }, sym: 72 },
+      { id: 'so-star', color: '#ffffff', shape: { kind: 'path', d: 'M336.5 381.2 254 327.7l-82.1 54 30.5-87.7-82-54.2L222 239l31.4-87.5 32.1 87.3 101.4.1-81.5 54.7z', cx: 317.8, cy: 249.9, w: 249.8, h: 215.8, pre: 'matrix(0.9375 0 0 0.9375 80 0)' }, target: { x: 317.8, y: 249.9, rot: 0 }, sym: 72 },
     ],
   },
   {
@@ -491,7 +494,7 @@ export const FLAGS = [
       hstripe('gh-red', '#ce1126', 0),
       hstripe('gh-yellow', '#fcd116', 1),
       hstripe('gh-green', '#006b3f', 2),
-      { id: 'gh-star', color: '#000000', shape: { kind: 'path', d: 'm320 160 52 160-136.1-98.9H404L268 320z', cx: 320, cy: 240, half: 84 }, target: { x: 320, y: 240, rot: 0 }, sym: 72 },
+      { id: 'gh-star', color: '#000000', shape: { kind: 'path', d: 'm320 160 52 160-136.1-98.9H404L268 320z', cx: 320, cy: 240, w: 168.1, h: 160 }, target: { x: 320, y: 240, rot: 0 }, sym: 72 },
     ],
   },
   {
@@ -500,7 +503,7 @@ export const FLAGS = [
       vstripe('sn-green', '#0b7226', 0),
       vstripe('sn-yellow', '#ffff00', 1),
       vstripe('sn-red', '#bc0000', 2),
-      { id: 'sn-star', color: '#0b7226', shape: { kind: 'path', d: 'M342 218.8h71.8l-56.6 43.6 20.7 69.3-56.6-43.6-56.6 41.6 20.7-67.3-56.6-43.6h69.8l22.7-71.3z', cx: 321.3, cy: 239.6, half: 92.5 }, target: { x: 321.3, y: 239.6, rot: 0 }, sym: 72 },
+      { id: 'sn-star', color: '#0b7226', shape: { kind: 'path', d: 'M342 218.8h71.8l-56.6 43.6 20.7 69.3-56.6-43.6-56.6 41.6 20.7-67.3-56.6-43.6h69.8l22.7-71.3z', cx: 321.3, cy: 239.6, w: 185, h: 184.2 }, target: { x: 321.3, y: 239.6, rot: 0 }, sym: 72 },
     ],
   },
   {
@@ -508,7 +511,7 @@ export const FLAGS = [
     blocks: [
       hstripe('bf-red', '#de0000', 0, 2),
       hstripe('bf-green', '#35a100', 1, 2),
-      { id: 'bf-star', color: '#fff300', shape: { kind: 'path', d: 'm254.6 276.2-106-72.4h131L320 86.6 360.4 204l131-.1-106 72.4 40.5 117.3-106-72.6L214 393.4', cx: 320, cy: 240.1, half: 171.4 }, target: { x: 320, y: 240.1, rot: 0 }, sym: 72 },
+      { id: 'bf-star', color: '#fff300', shape: { kind: 'path', d: 'm254.6 276.2-106-72.4h131L320 86.6 360.4 204l131-.1-106 72.4 40.5 117.3-106-72.6L214 393.4', cx: 320, cy: 240.1, w: 342.8, h: 307 }, target: { x: 320, y: 240.1, rot: 0 }, sym: 72 },
     ],
   },
   {
@@ -517,19 +520,21 @@ export const FLAGS = [
       box('cl-white', '#ffffff', 440, 120, 400, 240),
       box('cl-canton', '#0039a6', 120, 120, 240, 240),
       hband('cl-red', '#d52b1e', 360, 240),
-      { id: 'cl-star', color: '#ffffff', shape: { kind: 'path', d: 'M167.8 191.7 128.2 162l-39.5 30 14.7-48.8L64 113.1l48.7-.5L127.8 64l15.5 48.5 48.7.1-39.2 30.4z', cx: 120, cy: 120, half: 60, pre: 'scale(0.9375)' }, target: { x: 120, y: 120, rot: 0 }, sym: 72 },
+      { id: 'cl-star', color: '#ffffff', shape: { kind: 'path', d: 'M167.8 191.7 128.2 162l-39.5 30 14.7-48.8L64 113.1l48.7-.5L127.8 64l15.5 48.5 48.7.1-39.2 30.4z', cx: 120, cy: 120, w: 120, h: 120, pre: 'scale(0.9375)' }, target: { x: 120, y: 120, rot: 0 }, sym: 72 },
     ],
   },
   {
     id: 'tg', code: 'tg', name: 'Togo',
     blocks: [
-      hstripe('tg-g1', '#118600', 0, 5),
-      hstripe('tg-y1', '#ffe300', 1, 5),
-      hstripe('tg-g2', '#118600', 2, 5),
-      hstripe('tg-y2', '#ffe300', 3, 5),
-      hstripe('tg-g3', '#118600', 4, 5),
+      {
+        // All 5 stripes as a single piece, like Greece and the US.
+        id: 'tg-stripes',
+        shape: { kind: 'image', href: tgStripes, w: FLAG_W, h: FLAG_H },
+        target: { x: FLAG_W / 2, y: FLAG_H / 2, rot: 0 },
+        sym: 180,
+      },
       box('tg-canton', '#d80000', 143.7, 145.6, 287.3, 291.2),
-      { id: 'tg-star', color: '#ffffff', shape: { kind: 'path', d: 'M134.4 128.4c0-.8 18.9-53 18.9-53l17 52.2s57.4 1.7 57.4.8-45.3 34.3-45.3 34.3 21.4 60 20.5 58.2-49.6-36-49.6-36-49.7 34.3-48.8 34.3c.8 0 18.8-56.5 18.8-56.5l-44.5-33.4z', cx: 143.7, cy: 138.9, half: 69.8, pre: 'scale(0.9375)' }, target: { x: 143.7, y: 138.9, rot: 0 }, sym: 72 },
+      { id: 'tg-star', color: '#ffffff', shape: { kind: 'path', d: 'M134.4 128.4c0-.8 18.9-53 18.9-53l17 52.2s57.4 1.7 57.4.8-45.3 34.3-45.3 34.3 21.4 60 20.5 58.2-49.6-36-49.6-36-49.7 34.3-48.8 34.3c.8 0 18.8-56.5 18.8-56.5l-44.5-33.4z', cx: 143.7, cy: 138.9, w: 139.6, h: 136.4, pre: 'scale(0.9375)' }, target: { x: 143.7, y: 138.9, rot: 0 }, sym: 72 },
     ],
   },
 
@@ -538,16 +543,16 @@ export const FLAGS = [
     id: 'tr', code: 'tr', name: 'Turkey',
     blocks: [
       field('tr-field', '#e30a17'),
-      { id: 'tr-disc-w', color: '#ffffff', shape: { kind: 'path', d: 'M407 247.5c0 66.2-54.6 119.9-122 119.9s-122-53.7-122-120 54.6-119.8 122-119.8 122 53.7 122 119.9', cx: 285, cy: 247.5, half: 122 }, target: { x: 285, y: 247.5, rot: 0 }, sym: 'full' },
-      { id: 'tr-disc-r', color: '#e30a17', shape: { kind: 'path', d: 'M413 247.5c0 53-43.6 95.9-97.5 95.9s-97.6-43-97.6-96 43.7-95.8 97.6-95.8 97.6 42.9 97.6 95.9z', cx: 315.5, cy: 247.5, half: 97.6 }, target: { x: 315.5, y: 247.5, rot: 0 }, sym: 'full' },
-      { id: 'tr-star', color: '#ffffff', shape: { kind: 'path', d: 'm430.7 191.5-1 44.3-41.3 11.2 40.8 14.5-1 40.7 26.5-31.8 40.2 14-23.2-34.1 28.3-33.9-43.5 12-25.8-37z', cx: 444.2, cy: 246.8, half: 55.8 }, target: { x: 444.2, y: 246.8, rot: 0 }, sym: 72 },
+      { id: 'tr-disc-w', color: '#ffffff', shape: { kind: 'path', d: 'M407 247.5c0 66.2-54.6 119.9-122 119.9s-122-53.7-122-120 54.6-119.8 122-119.8 122 53.7 122 119.9', cx: 285, cy: 247.5, w: 244, h: 239.8 }, target: { x: 285, y: 247.5, rot: 0 }, sym: 'full' },
+      { id: 'tr-disc-r', color: '#e30a17', shape: { kind: 'path', d: 'M413 247.5c0 53-43.6 95.9-97.5 95.9s-97.6-43-97.6-96 43.7-95.8 97.6-95.8 97.6 42.9 97.6 95.9z', cx: 315.5, cy: 247.5, w: 195.2, h: 191.8 }, target: { x: 315.5, y: 247.5, rot: 0 }, sym: 'full' },
+      { id: 'tr-star', color: '#ffffff', shape: { kind: 'path', d: 'm430.7 191.5-1 44.3-41.3 11.2 40.8 14.5-1 40.7 26.5-31.8 40.2 14-23.2-34.1 28.3-33.9-43.5 12-25.8-37z', cx: 444.2, cy: 246.8, w: 111.6, h: 110.8 }, target: { x: 444.2, y: 246.8, rot: 0 }, sym: 72 },
     ],
   },
   {
     id: 'tn', code: 'tn', name: 'Tunisia',
     blocks: [
       field('tn-field', '#e70013'),
-      { id: 'tn-emblem', color: '#ffffff', shape: { kind: 'path', d: 'M320 119.2a1 1 0 0 0-1 240.3 1 1 0 0 0 1-240.3M392 293a90 90 0 1 1 0-107 72 72 0 1 0 0 107m-4.7-21.7-37.4-12.1-23.1 31.8v-39.3l-37.4-12.2 37.4-12.2V188l23.1 31.8 37.4-12.1-23.1 31.8z', cx: 319.5, cy: 239.4, half: 120.2 }, target: { x: 319.5, y: 239.4, rot: 0 }, sym: 360 },
+      { id: 'tn-emblem', color: '#ffffff', shape: { kind: 'path', d: 'M320 119.2a1 1 0 0 0-1 240.3 1 1 0 0 0 1-240.3M392 293a90 90 0 1 1 0-107 72 72 0 1 0 0 107m-4.7-21.7-37.4-12.1-23.1 31.8v-39.3l-37.4-12.2 37.4-12.2V188l23.1 31.8 37.4-12.1-23.1 31.8z', cx: 319.5, cy: 239.4, w: 240.2, h: 240.3 }, target: { x: 319.5, y: 239.4, rot: 0 }, sym: 360 },
     ],
   },
   {
@@ -555,8 +560,8 @@ export const FLAGS = [
     blocks: [
       field('pk-field', '#0c590b'),
       box('pk-hoist', '#ffffff', 70.2, 240, 140.4, 480),
-      { id: 'pk-crescent', color: '#ffffff', shape: { kind: 'path', d: 'M415.4 306a121 121 0 0 1-161.3 59.4 122 122 0 0 1-59.5-162.1A119 119 0 0 1 266 139a156 156 0 0 0-11.8 10.9A112.3 112.3 0 0 0 415.5 306z', cx: 329.7, cy: 241.8, half: 111.5, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 329.7, y: 241.8, rot: 0 }, sym: 360 },
-      { id: 'pk-star', color: '#ffffff', shape: { kind: 'path', d: 'm403.7 225.4-31.2-6.6-16.4 27.3-3.4-31.6-31-7.2 29-13-2.7-31.7 21.4 23.6 29.3-12.4-15.9 27.6 21 24z', cx: 389.1, cy: 191.6, half: 39.2, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 389.1, y: 191.6, rot: 0 }, sym: 72 },
+      { id: 'pk-crescent', color: '#ffffff', shape: { kind: 'path', d: 'M415.4 306a121 121 0 0 1-161.3 59.4 122 122 0 0 1-59.5-162.1A119 119 0 0 1 266 139a156 156 0 0 0-11.8 10.9A112.3 112.3 0 0 0 415.5 306z', cx: 329.7, cy: 241.8, w: 217.7, h: 222.9, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 329.7, y: 241.8, rot: 0 }, sym: 360 },
+      { id: 'pk-star', color: '#ffffff', shape: { kind: 'path', d: 'm403.7 225.4-31.2-6.6-16.4 27.3-3.4-31.6-31-7.2 29-13-2.7-31.7 21.4 23.6 29.3-12.4-15.9 27.6 21 24z', cx: 389.1, cy: 191.6, w: 77, h: 78.3, pre: 'matrix(0.9375 0 0 0.9375 49 0)' }, target: { x: 389.1, y: 191.6, rot: 0 }, sym: 72 },
     ],
   },
 
@@ -577,11 +582,11 @@ export const FLAGS = [
     id: 'cn', code: 'cn', name: 'China',
     blocks: [
       field('cn-field', '#ee1c25'),
-      { id: 'cn-star-big', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -7.2, half: 72, pre: 'scale(72)' }, target: { x: 120, y: 112.8, rot: 0 }, sym: 72 },
-      { id: 'cn-star-1', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 238.2, y: 49.2, rot: -120.93 }, sym: 72 },
-      { id: 'cn-star-2', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 285.6, y: 96.1, rot: -98.11 }, sym: 72 },
-      { id: 'cn-star-3', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 285.7, y: 167.3, rot: -74.04 }, sym: 72 },
-      { id: 'cn-star-4', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, half: 24, pre: 'scale(24)' }, target: { x: 238.1, y: 214.5, rot: -51.32 }, sym: 72 },
+      { id: 'cn-star-big', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -7.2, w: 144, h: 129.6, pre: 'scale(72)' }, target: { x: 120, y: 112.8, rot: 0 }, sym: 72 },
+      { id: 'cn-star-1', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, w: 48, h: 43.2, pre: 'scale(24)' }, target: { x: 238.2, y: 49.2, rot: -120.93 }, sym: 72 },
+      { id: 'cn-star-2', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, w: 48, h: 43.2, pre: 'scale(24)' }, target: { x: 285.6, y: 96.1, rot: -98.11 }, sym: 72 },
+      { id: 'cn-star-3', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, w: 48, h: 43.2, pre: 'scale(24)' }, target: { x: 285.7, y: 167.3, rot: -74.04 }, sym: 72 },
+      { id: 'cn-star-4', color: '#ffff00', shape: { kind: 'path', d: 'M-.6.8 0-1 .6.8-1-.3h2z', cx: 0, cy: -2.4, w: 48, h: 43.2, pre: 'scale(24)' }, target: { x: 238.1, y: 214.5, rot: -51.32 }, sym: 72 },
     ],
   },
 
@@ -599,7 +604,7 @@ export const FLAGS = [
     id: 'br', code: 'br', name: 'Brazil',
     blocks: [
       field('br-field', '#229e45'),
-      { id: 'br-rhombus', color: '#f8e509', shape: { kind: 'path', d: 'm321.4 436 301.5-195.7L319.6 44 17.1 240.7z', cx: 320, cy: 240, half: 303 }, target: { x: 320, y: 240, rot: 0 }, sym: 180 },
+      { id: 'br-rhombus', color: '#f8e509', shape: { kind: 'path', d: 'm321.4 436 301.5-195.7L319.6 44 17.1 240.7z', cx: 320, cy: 240, w: 605.8, h: 392 }, target: { x: 320, y: 240, rot: 0 }, sym: 180 },
       { id: 'br-globe', shape: { kind: 'image', href: brGlobe, w: 254.8, h: 254.8 }, target: { x: 325.4, y: 239.9, rot: 0 }, sym: 360 },
     ],
   },

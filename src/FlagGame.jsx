@@ -40,16 +40,44 @@ const isUniform = (b) => b.shape.kind !== 'rect'
 // Natural (unscaled, scale=1 = correct) bounding size.
 function dims(b) {
   const s = b.shape
-  if (s.kind === 'rect') return { w: s.w, h: s.h }
   if (s.kind === 'circle') return { w: 2 * s.r, h: 2 * s.r }
-  if (s.kind === 'image') return { w: s.w, h: s.h }
-  return { w: 2 * s.half, h: 2 * s.half } // path
+  return { w: s.w, h: s.h } // rect, image, path (real bbox, not a square)
 }
 
-// A piece may never grow larger than the flag itself.
+// A piece may never grow larger than the flag itself (unrotated baseline).
 const capX = (b) => Math.min(MAX_S, FLAG_W / dims(b).w)
 const capY = (b) => Math.min(MAX_S, FLAG_H / dims(b).h)
 const capU = (b) => { const n = dims(b); return Math.min(MAX_S, FLAG_W / n.w, FLAG_H / n.h) }
+
+// --- rotation-aware size limits: the ROTATED bbox must fit inside the flag ---
+const trig = (rot) => { const r = (rot * Math.PI) / 180; return { c: Math.abs(Math.cos(r)), s: Math.abs(Math.sin(r)) } }
+
+// shrink factor (≤1) that makes the rotated bbox fit at the given scales
+function fitFactor(b, rot, sx, sy) {
+  const { w, h } = dims(b)
+  const { c, s } = trig(rot)
+  const exW = w * sx * c + h * sy * s
+  const exH = w * sx * s + h * sy * c
+  return Math.min(1, FLAG_W / exW, FLAG_H / exH)
+}
+
+// largest sx (resp. sy) keeping the rotated bbox inside the flag, other axis fixed
+function maxSx(b, rot, sy) {
+  const { w, h } = dims(b)
+  const { c, s } = trig(rot)
+  let m = MAX_S
+  if (w * c > 1e-6) m = Math.min(m, (FLAG_W - h * sy * s) / (w * c))
+  if (w * s > 1e-6) m = Math.min(m, (FLAG_H - h * sy * c) / (w * s))
+  return Math.max(MIN_S, m)
+}
+function maxSy(b, rot, sx) {
+  const { w, h } = dims(b)
+  const { c, s } = trig(rot)
+  let m = MAX_S
+  if (h * c > 1e-6) m = Math.min(m, (FLAG_H - w * sx * s) / (h * c))
+  if (h * s > 1e-6) m = Math.min(m, (FLAG_W - w * sx * c) / (h * s))
+  return Math.max(MIN_S, m)
+}
 
 // Which cursor for a pointer at local offset (lx,ly) over a piece.
 // interior -> move; side -> axis arrows (rotation-aware); corner/symbol -> move.
@@ -159,6 +187,64 @@ function bestGroupAccuracy(sample, pieceLocs, targets) {
   return sum
 }
 
+// ---------- pixel scoring: compare the built flag to the real one ----------
+const assetTextCache = {}
+async function inlineAssetSvg(href, x, y, w, h) {
+  if (!assetTextCache[href]) assetTextCache[href] = await (await fetch(href)).text()
+  return assetTextCache[href].replace(
+    /<svg([^>]*)>/,
+    (m, attrs) => `<svg${attrs} x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none">`,
+  )
+}
+
+// Serialize the player's current arrangement to a standalone SVG (clipped to the
+// flag frame, transparent background so uncovered area can never score).
+async function builtFlagSvg(flag, locs) {
+  let inner = ''
+  for (const b of flag.blocks) {
+    const loc = locs[b.id]
+    if (!loc || loc.zone !== 'board') continue
+    const s = b.shape
+    let el = ''
+    if (s.kind === 'rect') el = `<rect x="${-s.w / 2}" y="${-s.h / 2}" width="${s.w}" height="${s.h}" fill="${b.color}"/>`
+    else if (s.kind === 'circle') el = `<circle r="${s.r}" fill="${b.color}"/>`
+    else if (s.kind === 'path') el = `<path d="${s.d}" transform="translate(${-s.cx} ${-s.cy})${s.pre ? ' ' + s.pre : ''}" fill="${b.color}"/>`
+    else if (s.kind === 'image') el = await inlineAssetSvg(s.href, -s.w / 2, -s.h / 2, s.w, s.h)
+    inner += `<g transform="translate(${loc.x} ${loc.y}) rotate(${loc.rot})"><g transform="scale(${loc.sx} ${loc.sy})">${el}</g></g>`
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${FLAG_W} ${FLAG_H}" width="${FLAG_W}" height="${FLAG_H}"><defs><clipPath id="fc"><rect width="${FLAG_W}" height="${FLAG_H}"/></clipPath></defs><g clip-path="url(#fc)">${inner}</g></svg>`
+}
+
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('img load failed')); i.src = src })
+
+// Fraction (0..1) of the flag area whose color matches the real flag.
+async function pixelAccuracy(flag, locs, realUrl) {
+  const W = 320
+  const H = 240
+  const [mine, real] = await Promise.all([
+    builtFlagSvg(flag, locs).then((s) => loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s))),
+    loadImg(realUrl),
+  ])
+  const draw = (img) => {
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(img, 0, 0, W, H)
+    return ctx.getImageData(0, 0, W, H).data
+  }
+  const d1 = draw(mine)
+  const d2 = draw(real)
+  let good = 0
+  const total = W * H
+  for (let i = 0; i < d1.length; i += 4) {
+    if (d1[i + 3] < 200) continue // uncovered flag area counts as wrong
+    const diff = Math.abs(d1[i] - d2[i]) + Math.abs(d1[i + 1] - d2[i + 1]) + Math.abs(d1[i + 2] - d2[i + 2])
+    if (diff <= 90) good++
+  }
+  return good / total
+}
+
 function Shape({ b, stroke, strokeW }) {
   const s = b.shape
   const ve = 'non-scaling-stroke'
@@ -176,7 +262,7 @@ function Shape({ b, stroke, strokeW }) {
     // sources whose SVGs use a different internal coordinate system.
     return (
       <>
-        <rect x={-s.half} y={-s.half} width={2 * s.half} height={2 * s.half} fill="transparent" />
+        <rect x={-s.w / 2} y={-s.h / 2} width={s.w} height={s.h} fill="transparent" />
         <path d={s.d} transform={`translate(${-s.cx} ${-s.cy})${s.pre ? ' ' + s.pre : ''}`} fill={b.color} stroke={stroke === 'none' ? undefined : stroke} strokeWidth={stroke === 'none' ? 0 : strokeW} vectorEffect={ve} />
       </>
     )
@@ -195,7 +281,8 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
   const [trayOrder, setTrayOrder] = useState([])
   const [selected, setSelected] = useState(null)
   const [score, setScore] = useState(null)
-  const drag = useRef(null) // { id, mode:'move'|'rotate'|'resize', offX, offY, axis }
+  const drag = useRef(null)
+  const submitting = useRef(false) // { id, mode:'move'|'rotate'|'resize', offX, offY, axis }
 
   const reset = useCallback(() => {
     const ids = flag.blocks.map((b) => b.id)
@@ -206,13 +293,21 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     const next = {}
     flag.blocks.forEach((b) => {
       const rot = randRot()
+      // per-piece slider calibration: random rotation offset and random track
+      // ranges so the correct value never sits at a recognizable slider position
+      const ui = {
+        rotOff: Math.random() * 360,
+        maxX: Math.min(capX(b), rand(1.15, MAX_S)),
+        maxY: Math.min(capY(b), rand(1.15, MAX_S)),
+        maxU: Math.min(capU(b), rand(1.15, MAX_S)),
+      }
       if (isUniform(b)) {
         const s = clampBetween(randScale(), MIN_S, capU(b))
-        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx: s, sy: s }
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx: s, sy: s, ui }
       } else {
         const sx = clampBetween(randScale(), MIN_S, capX(b))
         const sy = clampBetween(randScale(), MIN_S, capY(b))
-        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx, sy }
+        next[b.id] = { zone: 'tray', x: 0, y: 0, rot, sx, sy, ui }
       }
     })
     setLocs(next)
@@ -391,8 +486,12 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           return { ...prev, [d.id]: { ...loc, zone: 'board', x: cl.x, y: cl.y } }
         }
         if (d.mode === 'rotate') {
-          const cl = clampCenter(block, loc.x, loc.y, d.rot, loc.sx, loc.sy)
-          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot: d.rot } }
+          // if the new orientation doesn't fit the flag, shrink the piece to fit
+          const f = fitFactor(block, d.rot, loc.sx, loc.sy)
+          const sx = loc.sx * f
+          const sy = loc.sy * f
+          const cl = clampCenter(block, loc.x, loc.y, d.rot, sx, sy)
+          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot: d.rot, sx, sy } }
         }
         // resize: opposite edge/corner stays anchored; grow toward the pointer.
         const nat = dims(block)
@@ -404,13 +503,13 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         let cy = loc.y
         if (d.axis === 'x') {
           const width = d.signX * (ax * d.u.x + ay * d.u.y)
-          sx = clampBetween((width / (2 * d.hw0)) * d.sx0, MIN_S, capX(block))
+          sx = clampBetween((width / (2 * d.hw0)) * d.sx0, MIN_S, maxSx(block, loc.rot, loc.sy))
           const hw = (nat.w / 2) * sx
           cx = d.anchor.x + d.u.x * d.signX * hw
           cy = d.anchor.y + d.u.y * d.signX * hw
         } else if (d.axis === 'y') {
           const height = d.signY * (ax * d.v.x + ay * d.v.y)
-          sy = clampBetween((height / (2 * d.hh0)) * d.sy0, MIN_S, capY(block))
+          sy = clampBetween((height / (2 * d.hh0)) * d.sy0, MIN_S, maxSy(block, loc.rot, loc.sx))
           const hh = (nat.h / 2) * sy
           cx = d.anchor.x + d.v.x * d.signY * hh
           cy = d.anchor.y + d.v.y * d.signY * hh
@@ -419,9 +518,12 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           const Dx = d.u.x * d.signX * 2 * d.hw0 + d.v.x * d.signY * 2 * d.hh0
           const Dy = d.u.y * d.signX * 2 * d.hw0 + d.v.y * d.signY * 2 * d.hh0
           const fraw = (ax * Dx + ay * Dy) / (Dx * Dx + Dy * Dy)
-          // cap the shared factor so neither dimension exceeds MAX_S or the flag
+          // cap the shared factor: MAX_S per axis, and the ROTATED bbox must fit the flag
           const fmin = Math.max(MIN_S / d.sx0, MIN_S / d.sy0)
-          const fmax = Math.min(MAX_S / d.sx0, MAX_S / d.sy0, FLAG_W / (d.sx0 * nat.w), FLAG_H / (d.sy0 * nat.h))
+          const { c: tc, s: ts } = trig(loc.rot)
+          const exW0 = nat.w * d.sx0 * tc + nat.h * d.sy0 * ts
+          const exH0 = nat.w * d.sx0 * ts + nat.h * d.sy0 * tc
+          const fmax = Math.min(MAX_S / d.sx0, MAX_S / d.sy0, FLAG_W / exW0, FLAG_H / exH0)
           const f = clampBetween(fraw, fmin, fmax)
           sx = d.sx0 * f
           sy = d.sy0 * f
@@ -454,8 +556,11 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
           let rot = ((loc.rot % 360) + 360) % 360
           const nearest90 = Math.round(rot / 90) * 90
           if (Math.abs(rot - nearest90) <= SNAP_ROT_TOL) rot = nearest90 % 360
-          const cl = clampCenter(block, loc.x, loc.y, rot, loc.sx, loc.sy)
-          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot } }
+          const f = fitFactor(block, rot, loc.sx, loc.sy)
+          const sx = loc.sx * f
+          const sy = loc.sy * f
+          const cl = clampCenter(block, loc.x, loc.y, rot, sx, sy)
+          return { ...prev, [d.id]: { ...loc, x: cl.x, y: cl.y, rot, sx, sy } }
         })
       }
     }
@@ -469,26 +574,84 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
 
   const placedCount = flag.blocks.filter((b) => locs[b.id]?.zone === 'board').length
 
-  const submit = () => {
-    // Group interchangeable pieces, then take the best assignment within each group
-    // so swapping identical pieces never costs points.
-    const groups = new Map()
-    for (const b of flag.blocks) {
-      const sig = signature(b)
-      if (!groups.has(sig)) groups.set(sig, [])
-      groups.get(sig).push(b)
+  const submit = async () => {
+    if (drag.current || submitting.current) return
+    submitting.current = true
+    let mean
+    try {
+      // Score = the fraction of the flag's area that is colored correctly,
+      // comparing the built flag pixel-by-pixel against the real one.
+      mean = await pixelAccuracy(flag, locs, flagUrl(flag.code))
+      // a pixel-perfect build still loses a sliver to edge antialiasing — forgive it
+      mean = Math.min(1, mean / 0.985)
+    } catch {
+      // fallback: per-piece scoring (best assignment within interchangeable groups)
+      const groups = new Map()
+      for (const b of flag.blocks) {
+        const sig = signature(b)
+        if (!groups.has(sig)) groups.set(sig, [])
+        groups.get(sig).push(b)
+      }
+      let total = 0
+      for (const blocks of groups.values()) {
+        total += bestGroupAccuracy(blocks[0], blocks.map((b) => locs[b.id]), blocks.map((b) => b.target))
+      }
+      mean = total / flag.blocks.length
     }
-    let total = 0
-    for (const blocks of groups.values()) {
-      total += bestGroupAccuracy(blocks[0], blocks.map((b) => locs[b.id]), blocks.map((b) => b.target))
-    }
-    const mean = total / flag.blocks.length
+    submitting.current = false
     const s = Math.round(mean * 10 * 100) / 100 // 0.00–10.00
     setScore(s)
     setSelected(null)
   }
 
   const boardBlocks = flag.blocks.filter((b) => locs[b.id]?.zone === 'board')
+
+  // --- slider controls for the selected piece ---
+  const selBlock = selected ? flag.blocks.find((b) => b.id === selected) : null
+  const selLoc = selBlock ? locs[selected] : null
+  const selOnBoard = selLoc && selLoc.zone === 'board'
+
+  const setSelRot = (deg) => {
+    // gentle magnetism to level orientations (the random track offset would
+    // otherwise make exactly-level unreachable with discrete slider steps)
+    const n90 = Math.round(deg / 90) * 90
+    if (Math.abs(deg - n90) <= 3) deg = n90
+    setLocs((prev) => {
+      const loc = prev[selected]
+      if (!loc) return prev
+      // shrink to fit if this orientation doesn't fit the flag
+      const f = fitFactor(selBlock, deg, loc.sx, loc.sy)
+      const sx = loc.sx * f
+      const sy = loc.sy * f
+      const cl = clampCenter(selBlock, loc.x, loc.y, deg, sx, sy)
+      return { ...prev, [selected]: { ...loc, x: cl.x, y: cl.y, rot: deg, sx, sy } }
+    })
+  }
+
+  const setSelScale = (axis, v) => {
+    setLocs((prev) => {
+      const loc = prev[selected]
+      if (!loc) return prev
+      let { sx, sy } = loc
+      if (axis === 'uniform') {
+        // largest uniform scale whose rotated bbox still fits the flag
+        const { w, h } = dims(selBlock)
+        const { c, s } = trig(loc.rot)
+        const vMax = Math.min(FLAG_W / (w * c + h * s), FLAG_H / (w * s + h * c))
+        const vv = Math.min(v, vMax)
+        sx = vv; sy = vv
+      }
+      else if (axis === 'x') sx = Math.min(v, maxSx(selBlock, loc.rot, sy))
+      else sy = Math.min(v, maxSy(selBlock, loc.rot, sx))
+      const cl = clampCenter(selBlock, loc.x, loc.y, loc.rot, sx, sy)
+      return { ...prev, [selected]: { ...loc, x: cl.x, y: cl.y, sx, sy } }
+    })
+  }
+
+  // slider shows rotation through a per-piece random offset so "0 on the track"
+  // never means "level"; the piece itself is the only feedback
+  const selUi = selLoc?.ui || { rotOff: 0, maxX: MAX_S, maxY: MAX_S, maxU: MAX_S }
+  const dispRot = selLoc ? (((selLoc.rot - selUi.rotOff) % 360) + 360) % 360 : 0
 
   // --- result view (after submit): your flag vs the real flag, side by side ---
   if (locked) {
@@ -539,7 +702,50 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
   }
 
   return (
-    <div className="game">
+    <div className="game with-controls">
+      <div className="controls">
+        <span className="controls-title">Piece controls</span>
+        {selBlock && selOnBoard ? (
+          <>
+            <label className="ctl">
+              <span className="ctl-label">Rotation</span>
+              <input
+                type="range" min="0" max="360" step="0.5" value={dispRot}
+                onChange={(e) => setSelRot(+e.target.value + selUi.rotOff)}
+              />
+            </label>
+            {isUniform(selBlock) ? (
+              <label className="ctl">
+                <span className="ctl-label">Size</span>
+                <input
+                  type="range" min={MIN_S} max={selUi.maxU} step="0.005" value={selLoc.sx}
+                  onChange={(e) => setSelScale('uniform', +e.target.value)}
+                />
+              </label>
+            ) : (
+              <>
+                <label className="ctl">
+                  <span className="ctl-label">Width</span>
+                  <input
+                    type="range" min={MIN_S} max={selUi.maxX} step="0.005" value={selLoc.sx}
+                    onChange={(e) => setSelScale('x', +e.target.value)}
+                  />
+                </label>
+                <label className="ctl">
+                  <span className="ctl-label">Height</span>
+                  <input
+                    type="range" min={MIN_S} max={selUi.maxY} step="0.005" value={selLoc.sy}
+                    onChange={(e) => setSelScale('y', +e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+          </>
+        ) : (
+          <p className="controls-empty">Select a piece on the flag to adjust its rotation and size.</p>
+        )}
+      </div>
+
       <div className="board-wrap">
         <svg ref={svgRef} className="board" viewBox={`-20 -20 ${VB_W} ${VB_H}`} onPointerDown={() => setSelected(null)}>
           <defs>
@@ -607,7 +813,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         <span className="round-label">{roundLabel}</span>
         <h2>{flag.name}</h2>
 
-        <p className="hint">Click a piece in the tray to place it on the flag, then match the real flag as closely as you can — <strong>position, rotation, and size</strong> all count. Pieces start at random sizes: drag the middle of a piece to move it, grab an <strong>edge</strong> to resize that side, or a <strong>corner</strong> to resize evenly (symbols always resize evenly). To rotate, drag just outside a selected piece or use the scroll wheel. Submit to score from 0.00 to 10.00.</p>
+        <p className="hint">Click a piece in the tray to place it on the flag, then recreate the real flag as closely as you can. Drag the middle of a piece to move it, grab an <strong>edge</strong> to resize that side, or a <strong>corner</strong> to resize evenly (symbols always resize evenly); rotate by dragging just outside a piece or with the slider. Your score (0.00–10.00) is <strong>how much of the flag's area you colored correctly</strong> — uncovered area counts as wrong, so build the whole flag.</p>
 
         <p className="status">{placedCount} / {flag.blocks.length} placed</p>
 
