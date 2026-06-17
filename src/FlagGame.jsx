@@ -361,10 +361,13 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
       const rh = d.w * s + d.h * c
       return { id, rw, scale: Math.min(TRAY_MAX_SCALE, TRAY_INNER_H / rh) }
     })
-    let total = items.reduce((sum, it) => sum + it.rw * it.scale, 0) + TRAY_GAP * Math.max(0, items.length - 1)
-    const shrink = total > TRAY_WIDTH ? TRAY_WIDTH / total : 1
+    // gaps are a fixed size, so only the pieces themselves get shrunk to fit
+    const gaps = TRAY_GAP * Math.max(0, items.length - 1)
+    const sumW = items.reduce((sum, it) => sum + it.rw * it.scale, 0)
+    const avail = Math.max(1, TRAY_WIDTH - gaps)
+    const shrink = sumW > avail ? avail / sumW : 1
     items.forEach((it) => { it.scale *= shrink })
-    total *= shrink
+    const total = items.reduce((sum, it) => sum + it.rw * it.scale, 0) + gaps
     const cy = (TRAY_Y0 + TRAY_Y1) / 2
     let x = TRAY_LEFT + Math.max(0, (TRAY_WIDTH - total) / 2)
     const map = {}

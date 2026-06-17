@@ -112,15 +112,37 @@ export default function App() {
     setDone(false)
   }
 
+  const navTo = (m) => {
+    if (m === mode && !done) return
+    if (m === 'daily' && dailyResult) { setMode(null); setDone(false); return }
+    startMode(m)
+  }
+
   const header = (
     <header className="topbar">
-      <div className="brand">
-        <span className="brand-mark">⚑</span>
-        <h1>Flagle</h1>
-      </div>
-      <div className="topbar-actions">
-        {mode && <button className="pill-btn" onClick={backToMenu}>☰ <span className="pill-btn-text">Menu</span></button>}
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      <div className="topbar-inner">
+        <button className="brand" onClick={backToMenu} aria-label="Flagle — home">
+          <span className="brand-mark">⚑</span>
+          <span className="brand-name">Flagle</span>
+        </button>
+        <nav className="topnav">
+          <button
+            className={`nav-tab${mode === 'daily' ? ' active' : ''}`}
+            onClick={() => navTo('daily')}
+            title={dailyResult ? 'Daily already played today' : 'Daily challenge'}
+          >
+            📅 <span className="nav-tab-text">Daily</span>
+          </button>
+          <button
+            className={`nav-tab${mode === 'endless' ? ' active' : ''}`}
+            onClick={() => navTo('endless')}
+          >
+            ♾️ <span className="nav-tab-text">Endless</span>
+          </button>
+        </nav>
+        <div className="topbar-actions">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
       </div>
     </header>
   )
@@ -128,8 +150,9 @@ export default function App() {
   // ---------- menu ----------
   if (!mode) {
     return (
-      <div className="app">
+      <>
         {header}
+        <main className="app">
         <p className="tagline">Build each flag from its scattered pieces — match position, rotation, and size as closely as you can.</p>
         <div className="mode-grid">
           {dailyResult ? (
@@ -154,7 +177,8 @@ export default function App() {
             <span className="mode-tag">Replayable</span>
           </button>
         </div>
-      </div>
+        </main>
+      </>
     )
   }
 
@@ -162,8 +186,9 @@ export default function App() {
   if (done) {
     const avg = scores.length ? scores.reduce((s, r) => s + r.score, 0) / scores.length : 0
     return (
-      <div className="app">
+      <>
         {header}
+        <main className="app">
         <div className="card endscreen">
           <span className="round-label">{mode === 'daily' ? `Daily · ${todayKey()}` : 'Endless round'}</span>
           <h2>Round complete</h2>
@@ -184,22 +209,25 @@ export default function App() {
             {mode === 'endless' && <button className="btn" onClick={newEndless}>New round</button>}
           </div>
         </div>
-      </div>
+        </main>
+      </>
     )
   }
 
   // ---------- playing ----------
   return (
-    <div className="app">
+    <>
       {header}
-      <FlagGame
-        key={`${mode}-${idx}-${flag.id}`}
-        flag={flag}
-        roundLabel={`${mode === 'daily' ? 'Daily' : 'Endless'} · Flag ${idx + 1} of ${rounds.length}`}
-        isLast={isLast}
-        onNext={(score) => advance(score)}
-        onSkip={() => advance(null)}
-      />
-    </div>
+      <main className="app">
+        <FlagGame
+          key={`${mode}-${idx}-${flag.id}`}
+          flag={flag}
+          roundLabel={`${mode === 'daily' ? 'Daily' : 'Endless'} · Flag ${idx + 1} of ${rounds.length}`}
+          isLast={isLast}
+          onNext={(score) => advance(score)}
+          onSkip={() => advance(null)}
+        />
+      </main>
+    </>
   )
 }
