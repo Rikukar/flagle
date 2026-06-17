@@ -275,7 +275,7 @@ function Shape({ b, stroke, strokeW }) {
   )
 }
 
-export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
+export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip, mode, onScored }) {
   const svgRef = useRef(null)
   const [locs, setLocs] = useState({}) // id -> {zone, x, y, rot, sx, sy}
   const [trayOrder, setTrayOrder] = useState([])
@@ -605,6 +605,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
     const s = Math.round(mean * 10 * 100) / 100 // 0.00–10.00
     setScore(s)
     setSelected(null)
+    onScored?.(s)
   }
 
   const boardBlocks = flag.blocks.filter((b) => locs[b.id]?.zone === 'board')
@@ -697,7 +698,7 @@ export default function FlagGame({ flag, roundLabel, isLast, onNext, onSkip }) {
         </div>
 
         <div className="actions result-actions">
-          <button className="btn ghost" onClick={reset}>Try again</button>
+          {mode !== 'daily' && <button className="btn ghost" onClick={reset}>Try again</button>}
           <button className="btn" onClick={() => onNext(score)}>{isLast ? 'Finish' : 'Next flag →'}</button>
         </div>
       </div>
