@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FLAG_W, FLAG_H } from './flags'
 import { flagUrl } from './flagAssets'
+import {
+  MIN_S, MAX_S, clampBetween, isUniform, dims, capX, capY, capU,
+  trig, fitFactor, maxSx, maxSy, clampCenter, signature, bestGroupAccuracy,
+} from './geometry'
 
 const SNAP_ROT_TOL = 12 // snap to nearest 90deg (level) on release — a usability aid only
 
-// Scoring weights / tolerances.
-const MAX_DIST = 320 // a piece this far (units) from its target earns 0 position credit
-const SIZE_TOL = 0.6 // a scale off by this much (e.g. 1.6x or 0.4x) earns 0 size credit
-const W_POS = 0.5
-const W_ROT = 0.2
-const W_SIZE = 0.3
-
-// Resize limits and random starting range.
-const MIN_S = 0.3
-const MAX_S = 2.2
+// Random starting state for scattered pieces.
 const EDGE = 22 // grab band (units) near a piece edge/corner that starts a resize
 const rand = (lo, hi) => lo + Math.random() * (hi - lo)
 const randScale = () => rand(0.3, 0.6) // start small so pieces don't fill the flag
 const randRot = () => Math.random() * 360
-const clampBetween = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
 // --- tray geometry (below the flag frame) ---
 const TRAY_Y0 = 540
@@ -34,51 +28,6 @@ const TRAY_MAX_SCALE = 0.5
 const VB_W = FLAG_W + 40
 const VB_H = TRAY_Y1 + 20
 
-// Symbols (circle/emblem) scale uniformly so they never distort; rects are free.
-const isUniform = (b) => b.shape.kind !== 'rect'
-
-// Natural (unscaled, scale=1 = correct) bounding size.
-function dims(b) {
-  const s = b.shape
-  if (s.kind === 'circle') return { w: 2 * s.r, h: 2 * s.r }
-  return { w: s.w, h: s.h } // rect, image, path (real bbox, not a square)
-}
-
-// A piece may never grow larger than the flag itself (unrotated baseline).
-const capX = (b) => Math.min(MAX_S, FLAG_W / dims(b).w)
-const capY = (b) => Math.min(MAX_S, FLAG_H / dims(b).h)
-const capU = (b) => { const n = dims(b); return Math.min(MAX_S, FLAG_W / n.w, FLAG_H / n.h) }
-
-// --- rotation-aware size limits: the ROTATED bbox must fit inside the flag ---
-const trig = (rot) => { const r = (rot * Math.PI) / 180; return { c: Math.abs(Math.cos(r)), s: Math.abs(Math.sin(r)) } }
-
-// shrink factor (≤1) that makes the rotated bbox fit at the given scales
-function fitFactor(b, rot, sx, sy) {
-  const { w, h } = dims(b)
-  const { c, s } = trig(rot)
-  const exW = w * sx * c + h * sy * s
-  const exH = w * sx * s + h * sy * c
-  return Math.min(1, FLAG_W / exW, FLAG_H / exH)
-}
-
-// largest sx (resp. sy) keeping the rotated bbox inside the flag, other axis fixed
-function maxSx(b, rot, sy) {
-  const { w, h } = dims(b)
-  const { c, s } = trig(rot)
-  let m = MAX_S
-  if (w * c > 1e-6) m = Math.min(m, (FLAG_W - h * sy * s) / (w * c))
-  if (w * s > 1e-6) m = Math.min(m, (FLAG_H - h * sy * c) / (w * s))
-  return Math.max(MIN_S, m)
-}
-function maxSy(b, rot, sx) {
-  const { w, h } = dims(b)
-  const { c, s } = trig(rot)
-  let m = MAX_S
-  if (h * c > 1e-6) m = Math.min(m, (FLAG_H - w * sx * s) / (h * c))
-  if (h * s > 1e-6) m = Math.min(m, (FLAG_W - w * sx * c) / (h * s))
-  return Math.max(MIN_S, m)
-}
-
 // Which cursor for a pointer at local offset (lx,ly) over a piece.
 // interior -> move; side -> axis arrows (rotation-aware); corner/symbol -> move.
 function cursorFor(block, lx, ly, u, v, hw0, hh0) {
@@ -90,101 +39,6 @@ function cursorFor(block, lx, ly, u, v, hw0, hh0) {
   if (isUniform(block) || (nearX && nearY)) return 'move' // corner / symbol -> 4-way arrows
   const dir = nearX ? u : v // resize direction on screen
   return Math.abs(dir.x) >= Math.abs(dir.y) ? 'ew-resize' : 'ns-resize'
-}
-
-// --- placement bounds: pieces on the flag may not cross the flag borders ---
-const VB_MINX = 0
-const VB_MAXX = FLAG_W
-const VB_MINY = 0
-const VB_MAXY = FLAG_H
-
-// Keep a block's rotated, scaled bounding box inside the flag frame by clamping its center.
-function clampCenter(b, x, y, rot, sx, sy) {
-  const nat = dims(b)
-  const w = nat.w * sx
-  const h = nat.h * sy
-  const r = (rot * Math.PI) / 180
-  const c = Math.abs(Math.cos(r))
-  const s = Math.abs(Math.sin(r))
-  const halfW = (w / 2) * c + (h / 2) * s
-  const halfH = (w / 2) * s + (h / 2) * c
-  const fit = (v, lo, hi, mid) => (lo > hi ? mid : Math.min(hi, Math.max(lo, v)))
-  return {
-    x: fit(x, VB_MINX + halfW, VB_MAXX - halfW, (VB_MINX + VB_MAXX) / 2),
-    y: fit(y, VB_MINY + halfH, VB_MAXY - halfH, (VB_MINY + VB_MAXY) / 2),
-  }
-}
-
-function angleDiff(a, b, period) {
-  if (period === 'full') return 0
-  let d = (((a - b) % period) + period) % period
-  if (d > period / 2) d = period - d
-  return Math.abs(d)
-}
-
-const sizeAcc = (s) => Math.max(0, 1 - Math.abs(s - 1) / SIZE_TOL)
-
-// Accuracy in [0,1] of a piece (loc) measured against a given target.
-function accFor(block, loc, target) {
-  if (!loc || loc.zone !== 'board') return 0
-  const dist = Math.hypot(loc.x - target.x, loc.y - target.y)
-  const accPos = Math.max(0, 1 - dist / MAX_DIST)
-  let accRot = 1
-  if (block.sym !== 'full') {
-    accRot = Math.max(0, 1 - angleDiff(loc.rot, target.rot, block.sym) / (block.sym / 2))
-  }
-  const accSize = isUniform(block) ? sizeAcc(loc.sx) : (sizeAcc(loc.sx) + sizeAcc(loc.sy)) / 2
-  return W_POS * accPos + W_ROT * accRot + W_SIZE * accSize
-}
-
-// Visual signature — pieces that share one are interchangeable (e.g. Nigeria's two
-// green stripes, Canada's two red bars), so it shouldn't matter which goes where.
-function signature(b) {
-  const s = b.shape
-  if (s.kind === 'rect') return `rect:${s.w}:${s.h}:${b.color}:${b.sym}`
-  if (s.kind === 'circle') return `circle:${s.r}:${b.color}:${b.sym}`
-  if (s.kind === 'path') return `path:${b.color}:${b.sym}:${s.d}`
-  return `image:${s.href}:${s.w}:${s.h}:${b.sym}`
-}
-
-// Best total accuracy when assigning a group of identical pieces to their targets.
-function bestGroupAccuracy(sample, pieceLocs, targets) {
-  const n = pieceLocs.length
-  if (n === 1) return accFor(sample, pieceLocs[0], targets[0])
-  let best = -Infinity
-  const idx = [...Array(n).keys()]
-  const permute = (k) => {
-    if (k === n) {
-      let sum = 0
-      for (let i = 0; i < n; i++) sum += accFor(sample, pieceLocs[i], targets[idx[i]])
-      if (sum > best) best = sum
-      return
-    }
-    for (let i = k; i < n; i++) {
-      ;[idx[k], idx[i]] = [idx[i], idx[k]]
-      permute(k + 1)
-      ;[idx[k], idx[i]] = [idx[i], idx[k]]
-    }
-  }
-  if (n <= 8) {
-    permute(0)
-    return best
-  }
-  // greedy fallback for improbably large groups
-  const used = new Array(n).fill(false)
-  let sum = 0
-  for (let i = 0; i < n; i++) {
-    let bj = -1
-    let bv = -Infinity
-    for (let j = 0; j < n; j++) {
-      if (used[j]) continue
-      const v = accFor(sample, pieceLocs[i], targets[j])
-      if (v > bv) { bv = v; bj = j }
-    }
-    used[bj] = true
-    sum += bv
-  }
-  return sum
 }
 
 // ---------- pixel scoring: compare the built flag to the real one ----------

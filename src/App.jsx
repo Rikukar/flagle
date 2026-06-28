@@ -1,41 +1,12 @@
 import { useEffect, useState } from 'react'
 import { FLAGS } from './flags'
 import FlagGame from './FlagGame'
+import { pickN, dailyKeyFor, dailyPick } from './daily'
 
 const ROUND_SIZE = 5
 
-// --- deterministic RNG so the daily round is identical for everyone ---
-function hashStr(s) {
-  let h = 2166136261 >>> 0
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-function mulberry32(a) {
-  return function () {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-function pickN(arr, n, rng) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a.slice(0, n)
-}
-
-const todayKey = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-const dailyRounds = () => pickN(FLAGS, ROUND_SIZE, mulberry32(hashStr('flagle-' + todayKey())))
+const todayKey = () => dailyKeyFor()
+const dailyRounds = () => dailyPick(FLAGS, ROUND_SIZE, todayKey())
 const endlessRounds = () => pickN(FLAGS, ROUND_SIZE, Math.random)
 
 const dailyStoreKey = () => 'flagle-daily-' + todayKey()
